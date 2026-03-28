@@ -119,6 +119,7 @@ static int window_clamp;
 
 #define	PROXY_MODE_OUT	2
 static int proxy_mode;
+int stats_allow_any = 0;
 int direct_mode;
 int ipv6_enabled;
 
@@ -1701,7 +1702,7 @@ int hts_stats_execute (connection_job_t c, struct raw_message *msg, int op) {
     D->query_flags &= ~QF_KEEPALIVE;
     return -501;
   }
-  if (!is_private_ip(CONN_INFO(c)->remote_ip)) {
+  if (!stats_allow_any && !is_private_ip(CONN_INFO(c)->remote_ip)) {
     return -404;
   }
 
@@ -2509,10 +2510,6 @@ int f_parse_option (int val) {
       ping_interval = PING_INTERVAL;
     }
     break;
-  case 2000:
-    engine_set_http_fallback (&ct_http_server, &http_methods_stats);
-    mtproto_front_functions.flags &= ~ENGINE_NO_PORT;
-    break;
   case 'D':
     tcp_rpc_add_proxy_domain (optarg);
     domain_count++;
@@ -2612,6 +2609,12 @@ int f_parse_option (int val) {
   case 2003:
     direct_mode = 1;
     break;
+  case 2004:
+    stats_allow_any = 1;
+  case 2000:
+    engine_set_http_fallback (&ct_http_server, &http_methods_stats);
+    mtproto_front_functions.flags &= ~ENGINE_NO_PORT;
+    break;
   default:
     return -1;
   }
@@ -2620,6 +2623,7 @@ int f_parse_option (int val) {
 
 void mtfront_prepare_parse_options (void) {
   parse_option ("http-stats", no_argument, 0, 2000, "allow http server to answer on stats queries");
+  parse_option ("http-stats-allow-any", no_argument, 0, 2004, "allow http server to answer on any source address");
   parse_option ("mtproto-secret", required_argument, 0, 'S', "16-byte secret in hex, optionally :LABEL:LIMIT (e.g. -S abcdef01234567890abcdef012345678:myapp:1000)");
   parse_option ("proxy-tag", required_argument, 0, 'P', "16-byte proxy tag in hex mode to be passed along with all forwarded queries");
   parse_option ("domain", required_argument, 0, 'D', "adds allowed domain or host:port for TLS-transport mode, disables other transports; can be specified more than once");
