@@ -7,8 +7,8 @@ import os
 def test_http_stats():
     """Test that the HTTP stats endpoint is accessible."""
     print("Testing HTTP stats...")
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = os.environ.get("MTPROXY_STATS_PORT", "8888")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = os.environ.get("TELEPROXY_STATS_PORT", "8888")
     url = f"http://{host}:{stats_port}/stats"
     try:
         ip = socket.gethostbyname(host)
@@ -32,8 +32,8 @@ def test_http_stats():
 def test_prometheus_metrics():
     """Test that the Prometheus metrics endpoint returns valid exposition format."""
     print("Testing Prometheus metrics...")
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = os.environ.get("MTPROXY_STATS_PORT", "8888")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = os.environ.get("TELEPROXY_STATS_PORT", "8888")
     url = f"http://{host}:{stats_port}/metrics"
 
     for i in range(5):
@@ -52,12 +52,12 @@ def test_prometheus_metrics():
 
             # Verify key metrics exist
             required_metrics = [
-                "mtproxy_queries_total",
-                "mtproxy_ext_connections",
-                "mtproxy_uptime_seconds",
-                "mtproxy_workers",
-                "mtproxy_forwarded_queries_total",
-                "mtproxy_active_connections",
+                "teleproxy_queries_total",
+                "teleproxy_ext_connections",
+                "teleproxy_uptime_seconds",
+                "teleproxy_workers",
+                "teleproxy_forwarded_queries_total",
+                "teleproxy_active_connections",
             ]
             for metric in required_metrics:
                 assert metric in body, f"Missing metric: {metric}"
@@ -75,8 +75,8 @@ def test_prometheus_metrics():
                     raise AssertionError(f"Non-numeric value for {name}: {value}")
 
             # Verify counter and gauge types are declared
-            assert "# TYPE mtproxy_queries_total counter" in body
-            assert "# TYPE mtproxy_uptime_seconds gauge" in body
+            assert "# TYPE teleproxy_queries_total counter" in body
+            assert "# TYPE teleproxy_uptime_seconds gauge" in body
 
             print(f"Prometheus metrics OK: {len(body)} bytes, "
                   f"{sum(1 for l in body.split(chr(10)) if not l.startswith('#') and l.strip())} metrics")
@@ -93,8 +93,8 @@ def test_prometheus_metrics():
 def test_mtproto_port():
     """Test that the MTProto port accepts TCP connections."""
     print("Testing MTProto port...")
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", 443))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", 443))
     try:
         ip = socket.gethostbyname(host)
         print(f"Connecting to {ip}:{port}")
@@ -128,7 +128,7 @@ def check_upstream_connectivity():
             print(f"WARNING: Could not connect to Telegram DC {dc_ip}:{dc_port}: {e}")
             print("This indicates a network issue (ISP blocking, firewall, etc.)")
             if dc_port == 8888:
-                print("MTProxy often uses port 8888 to connect to DCs. If this is blocked, proxy will fail.")
+                print("Teleproxy often uses port 8888 to connect to DCs. If this is blocked, proxy will fail.")
 
 if __name__ == "__main__":
     print("Starting tests...", flush=True)

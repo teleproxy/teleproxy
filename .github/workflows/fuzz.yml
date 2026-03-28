@@ -15,7 +15,7 @@
 #
 # All targets run with ASan + UBSan + libFuzzer (coverage-guided).
 # See fuzz-scheduled.yml header for detailed explanation of why fuzzing
-# matters for a public-facing network parser like MTProxy.
+# matters for a public-facing network parser like Teleproxy.
 # =============================================================================
 
 name: Fuzz Testing

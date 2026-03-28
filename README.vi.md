@@ -46,21 +46,21 @@ Proxy MT-Proto hiệu suất cao cho Telegram với khả năng chống DPI, ng�
 
 ```bash
 # Tải về (amd64 hoặc arm64)
-curl -Lo mtproto-proxy https://github.com/teleproxy/teleproxy/releases/latest/download/mtproto-proxy-linux-amd64
-chmod +x mtproto-proxy
+curl -Lo teleproxy https://github.com/teleproxy/teleproxy/releases/latest/download/teleproxy-linux-amd64
+chmod +x teleproxy
 
 # Tạo secret
 SECRET=$(head -c 16 /dev/urandom | xxd -ps)
 
 # Chạy ở chế độ direct (đơn giản nhất — không cần file cấu hình)
-./mtproto-proxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
+./teleproxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
 ```
 
 ### Docker (khởi động nhanh)
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   --restart unless-stopped \
@@ -75,14 +75,14 @@ Container tự động:
 Link kết nối trong log:
 
 ```bash
-docker logs mtproxy
+docker logs teleproxy
 ```
 
 ### Docker với Fake-TLS (chế độ EE)
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e EE_DOMAIN=www.google.com \
@@ -94,7 +94,7 @@ docker run -d \
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e DIRECT_MODE=true \
@@ -126,7 +126,7 @@ echo -n "ee${SECRET}" && echo -n $DOMAIN | xxd -plain
 
 ### Chế độ EE với TLS backend tùy chỉnh
 
-Chạy nginx với chứng chỉ thật phía sau MTProxy. Kết nối không hợp lệ được chuyển tiếp tới nginx — server không thể phân biệt với website thông thường.
+Chạy nginx với chứng chỉ thật phía sau Teleproxy. Kết nối không hợp lệ được chuyển tiếp tới nginx — server không thể phân biệt với website thông thường.
 
 **DRS (Dynamic Record Sizing):** Bản ghi TLS tự động thay đổi kích thước, mô phỏng hành vi của server HTTPS thực. Không cần cấu hình.
 

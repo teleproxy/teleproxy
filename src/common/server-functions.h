@@ -124,7 +124,7 @@ static inline void mfence (void) {
 //extern int multicast_hosts_num;
 
 #define DEFAULT_BACKLOG 8192
-#define DEFAULT_ENGINE_USER "mtproxy"
+#define DEFAULT_ENGINE_USER "teleproxy"
 
 #ifdef __cplusplus
 }

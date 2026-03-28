@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E2E tests for MTProxy multi-secret support.
+"""E2E tests for Teleproxy multi-secret support.
 
 Verifies that the proxy accepts fake-TLS handshakes using each of
 multiple configured secrets, and still rejects unknown secrets.
@@ -16,11 +16,11 @@ from test_tls_e2e import (
 
 def test_multi_secret_handshake():
     """Verify fake-TLS handshake succeeds with each configured secret."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secrets_csv = os.environ.get("MTPROXY_SECRETS", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secrets_csv = os.environ.get("TELEPROXY_SECRETS", "")
 
-    assert secrets_csv, "MTPROXY_SECRETS environment variable not set"
+    assert secrets_csv, "TELEPROXY_SECRETS environment variable not set"
     secrets = [s.strip() for s in secrets_csv.split(",") if s.strip()]
     assert len(secrets) >= 2, f"Expected at least 2 secrets, got {len(secrets)}"
 
@@ -40,11 +40,11 @@ def test_multi_secret_handshake():
 
 def test_wrong_secret_still_rejected():
     """Verify that an unknown secret is rejected with multiple secrets configured."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secrets_csv = os.environ.get("MTPROXY_SECRETS", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secrets_csv = os.environ.get("TELEPROXY_SECRETS", "")
 
-    assert secrets_csv, "MTPROXY_SECRETS environment variable not set"
+    assert secrets_csv, "TELEPROXY_SECRETS environment variable not set"
     first_secret = secrets_csv.split(",")[0].strip()
 
     # Flip all bits to get an unknown secret
@@ -64,8 +64,8 @@ def main():
         ("test_wrong_secret_still_rejected", test_wrong_secret_still_rejected),
     ]
 
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
 
     print("Starting multi-secret TLS tests...\n", flush=True)
     print(f"Waiting for proxy at {host}:{port}...", flush=True)

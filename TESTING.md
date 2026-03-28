@@ -1,6 +1,6 @@
-# Testing MTProxy
+# Testing Teleproxy
 
-This repository includes a test suite to verify the functionality of the MTProxy server. The tests run in Docker or directly on the host and check:
+This repository includes a test suite to verify the functionality of the Teleproxy server. The tests run in Docker or directly on the host and check:
 
 1. **HTTP Stats**: Verifies the stats endpoint (port 8888) is accessible.
 2. **Prometheus Metrics**: Verifies the `/metrics` endpoint returns valid Prometheus exposition format.
@@ -23,12 +23,12 @@ make test
 ```
 
 This will:
-1. Build the MTProxy Docker image.
+1. Build the Teleproxy Docker image.
 2. Build the test runner Docker image.
 3. Start the proxy and test runner.
 4. Execute the connectivity checks.
 
-A random secret will be generated automatically if `MTPROXY_SECRET` is not set.
+A random secret will be generated automatically if `TELEPROXY_SECRET` is not set.
 
 ### Running Locally (No Docker)
 
@@ -40,8 +40,8 @@ If you want to run the tests against a local instance:
    ```
 2. Set environment variables:
    ```bash
-   export MTPROXY_HOST=localhost  # or IP of your proxy
-   export MTPROXY_PORT=443        # or your proxy port
+   export TELEPROXY_HOST=localhost  # or IP of your proxy
+   export TELEPROXY_PORT=443        # or your proxy port
    ```
 3. Run the script:
    ```bash

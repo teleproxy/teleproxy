@@ -46,21 +46,21 @@
 
 ```bash
 # دانلود (amd64 یا arm64)
-curl -Lo mtproto-proxy https://github.com/teleproxy/teleproxy/releases/latest/download/mtproto-proxy-linux-amd64
-chmod +x mtproto-proxy
+curl -Lo teleproxy https://github.com/teleproxy/teleproxy/releases/latest/download/teleproxy-linux-amd64
+chmod +x teleproxy
 
 # ایجاد سیکرت
 SECRET=$(head -c 16 /dev/urandom | xxd -ps)
 
 # اجرا در حالت direct (ساده‌ترین — بدون نیاز به فایل پیکربندی)
-./mtproto-proxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
+./teleproxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
 ```
 
 ### Docker (شروع سریع)
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   --restart unless-stopped \
@@ -75,14 +75,14 @@ docker run -d \
 لینک‌های اتصال در لاگ‌ها:
 
 ```bash
-docker logs mtproxy
+docker logs teleproxy
 ```
 
 ### Docker با Fake-TLS (حالت EE)
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e EE_DOMAIN=www.google.com \
@@ -94,7 +94,7 @@ docker run -d \
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e DIRECT_MODE=true \
@@ -126,7 +126,7 @@ echo -n "ee${SECRET}" && echo -n $DOMAIN | xxd -plain
 
 ### حالت EE با بک‌اند TLS سفارشی
 
-nginx با گواهی واقعی پشت MTProxy اجرا کنید. اتصالات نامعتبر به nginx هدایت می‌شوند — سرور از یک وب‌سایت معمولی قابل تشخیص نیست.
+nginx با گواهی واقعی پشت Teleproxy اجرا کنید. اتصالات نامعتبر به nginx هدایت می‌شوند — سرور از یک وب‌سایت معمولی قابل تشخیص نیست.
 
 **DRS (تغییر اندازه رکورد پویا):** رکوردهای TLS به طور خودکار از نظر اندازه متفاوت هستند و رفتار سرورهای واقعی HTTPS را تقلید می‌کنند. نیازی به پیکربندی نیست.
 

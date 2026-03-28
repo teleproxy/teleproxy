@@ -2,9 +2,9 @@
 # Scheduled Fuzz Campaign — Deep Coverage Exploration
 # =============================================================================
 #
-# WHY FUZZ MTPROXY?
+# WHY FUZZ TELEPROXY?
 #
-#   MTProxy is a public-facing network server that parses untrusted bytes
+#   Teleproxy is a public-facing network server that parses untrusted bytes
 #   directly from the internet. The protocol parsers are the primary attack
 #   surface — a single buffer overflow or integer error in TLS/HTTP parsing
 #   means anyone on the internet can crash (or potentially exploit) every

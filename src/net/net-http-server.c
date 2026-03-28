@@ -45,7 +45,7 @@
  *
  */
 
-#define        SERVER_VERSION        "MTProxy/1.0"
+#define        SERVER_VERSION        "Teleproxy/1.0"
 
 int http_connections;
 long long http_queries, http_bad_headers, http_queries_size;

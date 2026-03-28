@@ -115,8 +115,8 @@ def send_post_handshake_data(host, port, secret_bytes, domain=None):
 
 def test_delays_enabled_in_stats():
     """Verify drs_delays_enabled=1 appears in stats."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = int(os.environ.get("MTPROXY_STATS_PORT", "8888"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = int(os.environ.get("TELEPROXY_STATS_PORT", "8888"))
 
     stats = get_stats(host, stats_port)
     val = parse_stat(stats, "drs_delays_enabled")
@@ -126,8 +126,8 @@ def test_delays_enabled_in_stats():
 
 def test_weibull_params_in_stats():
     """Verify Weibull parameters appear in stats with default values."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = int(os.environ.get("MTPROXY_STATS_PORT", "8888"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = int(os.environ.get("TELEPROXY_STATS_PORT", "8888"))
 
     stats = get_stats(host, stats_port)
 
@@ -145,9 +145,9 @@ def test_weibull_params_in_stats():
 
 def test_tls_handshake_with_delays():
     """Verify TLS handshake + HMAC still works with delays enabled."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
     secret_bytes = bytes.fromhex(secret_hex)
 
     data, client_random = _do_handshake(host, port, secret_bytes)
@@ -160,10 +160,10 @@ def test_tls_handshake_with_delays():
 
 def test_delays_applied_after_data():
     """Verify drs_delays_applied increments after data exchange."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    stats_port = int(os.environ.get("MTPROXY_STATS_PORT", "8888"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    stats_port = int(os.environ.get("TELEPROXY_STATS_PORT", "8888"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
     secret_bytes = bytes.fromhex(secret_hex)
 
     # Get initial count
@@ -186,8 +186,8 @@ def test_delays_applied_after_data():
 
 def test_delays_skipped_stat_exists():
     """Verify drs_delays_skipped appears in stats."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = int(os.environ.get("MTPROXY_STATS_PORT", "8888"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = int(os.environ.get("TELEPROXY_STATS_PORT", "8888"))
 
     stats = get_stats(host, stats_port)
     val = parse_stat(stats, "drs_delays_skipped")
@@ -197,14 +197,14 @@ def test_delays_skipped_stat_exists():
 
 def test_prometheus_drs_metrics():
     """Verify DRS metrics appear in Prometheus output."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = int(os.environ.get("MTPROXY_STATS_PORT", "8888"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = int(os.environ.get("TELEPROXY_STATS_PORT", "8888"))
 
     stats = get_stats(host, stats_port, path="/metrics")
-    assert "mtproxy_drs_delays_total" in stats, "Missing mtproxy_drs_delays_total"
-    assert "mtproxy_drs_delays_skipped_total" in stats, "Missing mtproxy_drs_delays_skipped_total"
-    assert "mtproxy_drs_weibull_k" in stats, "Missing mtproxy_drs_weibull_k"
-    assert "mtproxy_drs_weibull_lambda" in stats, "Missing mtproxy_drs_weibull_lambda"
+    assert "teleproxy_drs_delays_total" in stats, "Missing teleproxy_drs_delays_total"
+    assert "teleproxy_drs_delays_skipped_total" in stats, "Missing teleproxy_drs_delays_skipped_total"
+    assert "teleproxy_drs_weibull_k" in stats, "Missing teleproxy_drs_weibull_k"
+    assert "teleproxy_drs_weibull_lambda" in stats, "Missing teleproxy_drs_weibull_lambda"
     print("  OK: Prometheus metrics present")
 
 
@@ -215,10 +215,10 @@ def test_bulk_transfer_delay_bounds():
     (60 records, ~140KB).  After the fix, delays should only be applied during
     phases 1+2 and skipped once phase 3 starts.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    stats_port = int(os.environ.get("MTPROXY_STATS_PORT", "8888"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    stats_port = int(os.environ.get("TELEPROXY_STATS_PORT", "8888"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
     secret_bytes = bytes.fromhex(secret_hex)
 
     # Snapshot stats before
@@ -312,8 +312,8 @@ def test_bulk_transfer_delay_bounds():
 
 
 def main():
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
 
     print(f"Waiting for proxy at {host}:{port}...")
     if not wait_for_proxy(host, port, timeout=90):

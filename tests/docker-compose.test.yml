@@ -1,5 +1,5 @@
 services:
-  mtproxy:
+  teleproxy:
     build:
       context: ..
       dockerfile: Dockerfile
@@ -13,7 +13,7 @@ services:
         soft: 65536
         hard: 65536
     environment:
-      - SECRET=${MTPROXY_SECRET}
+      - SECRET=${TELEPROXY_SECRET}
       - PORT=8443
       - WORKERS=1
     healthcheck:
@@ -25,9 +25,9 @@ services:
   tester:
     build: .
     environment:
-      - MTPROXY_HOST=mtproxy
-      - MTPROXY_PORT=8443
-      - MTPROXY_STATS_PORT=8888
+      - TELEPROXY_HOST=teleproxy
+      - TELEPROXY_PORT=8443
+      - TELEPROXY_STATS_PORT=8888
     depends_on:
-      mtproxy:
+      teleproxy:
         condition: service_healthy

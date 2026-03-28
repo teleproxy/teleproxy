@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E2E tests for MTProxy TLS handshake probing and emulation.
+"""E2E tests for Teleproxy TLS handshake probing and emulation.
 
 Uses a real Telethon client to connect through the proxy (proving the full
 fake-TLS handshake pipeline works), and raw socket probes to independently
@@ -36,7 +36,7 @@ def _generate_greases():
 
 
 def build_client_hello(domain):
-    """Build a 517-byte TLS ClientHello matching MTProxy's create_request().
+    """Build a 517-byte TLS ClientHello matching Teleproxy's create_request().
 
     Args:
         domain: SNI hostname to include in the ClientHello.
@@ -432,8 +432,8 @@ def wait_for_proxy(host, port, timeout=60):
 
 def test_proxy_accepts_connections():
     """Verify proxy port accepts TCP connections."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
@@ -455,14 +455,14 @@ def test_fake_tls_handshake():
 
     No Telegram DC connectivity needed — this only tests the proxy's TLS layer.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
     # Use the -D domain so SNI lookup succeeds; for IP-based -D, any SNI works
     # since default_domain_info is used as fallback
     domain = os.environ.get("TLS_BACKEND_HOST", "tls-backend")
 
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     secret_bytes = bytes.fromhex(secret_hex)
 
     # Build ClientHello
@@ -545,9 +545,9 @@ def test_emulation_matches_backend():
     Probes the real TLS backend directly and connects to the proxy with
     fake-TLS, then compares the extension order — it must match.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
     domain = os.environ.get("TLS_BACKEND_HOST", "tls-backend")
     backend_port = int(os.environ.get("TLS_BACKEND_PORT", "443"))
 
@@ -613,10 +613,10 @@ def test_server_random_hmac():
     The proxy computes server_random = HMAC-SHA256(secret, client_random + zeroed_response).
     Verifying this proves the proxy (not the real backend) generated the response.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     secret_bytes = bytes.fromhex(secret_hex)
 
     data, client_random = _do_handshake(host, port, secret_bytes)
@@ -636,10 +636,10 @@ def test_wrong_secret_rejected():
     The proxy should forward the connection to the real TLS backend.
     We detect this by checking that the server_random HMAC does NOT match.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     real_secret = bytes.fromhex(secret_hex)
 
     # Use a different secret for the HMAC (flip every bit of the real secret)
@@ -662,10 +662,10 @@ def test_stale_timestamp_rejected():
     With the tightened 2-minute replay window (MAX_ALLOWED_TIMESTAMP_ERROR=120s),
     a timestamp 600 seconds in the past should be rejected.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     secret_bytes = bytes.fromhex(secret_hex)
 
     data, client_random = _do_handshake(
@@ -688,10 +688,10 @@ def test_near_limit_timestamp_accepted():
     With MAX_ALLOWED_TIMESTAMP_ERROR=120s, a timestamp 90 seconds in the past
     is within the window and should be accepted.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     secret_bytes = bytes.fromhex(secret_hex)
 
     data, client_random = _do_handshake(
@@ -716,10 +716,10 @@ def test_unknown_sni_falls_back():
     to the real backend. This tests the anti-detection path: a censor probing
     with a ClientHello for a different domain sees a real TLS server.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     secret_bytes = bytes.fromhex(secret_hex)
 
     # Use a domain that does NOT match the proxy's -D setting
@@ -744,10 +744,10 @@ def test_duplicate_client_random_rejected():
     The first handshake should succeed; the second with identical bytes should
     be forwarded to the real backend.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET", "")
-    assert secret_hex, "MTPROXY_SECRET environment variable not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret_hex, "TELEPROXY_SECRET environment variable not set"
     secret_bytes = bytes.fromhex(secret_hex)
     domain = os.environ.get(
         "EE_DOMAIN", os.environ.get("TLS_BACKEND_HOST", "172.30.0.10")
@@ -819,8 +819,8 @@ def test_browser_tls_sees_real_backend():
     HTTPS connection (e.g. curl, browser) should complete a real TLS handshake
     with the backend server, not receive a TLS error or proxy-generated response.
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
 
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
@@ -884,12 +884,12 @@ def test_telethon_connects():
 
     _patch_telethon_faketls()
 
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret = os.environ.get("MTPROXY_SECRET", "")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret = os.environ.get("TELEPROXY_SECRET", "")
     ee_domain = os.environ.get("EE_DOMAIN", "172.30.0.10")
 
-    assert secret, "MTPROXY_SECRET environment variable not set"
+    assert secret, "TELEPROXY_SECRET environment variable not set"
 
     async def _connect():
         client = TelegramClient(
@@ -920,7 +920,7 @@ def test_telethon_connects():
                 pass
 
     connected = asyncio.run(_connect())
-    assert connected, "Telethon failed to connect through MTProxy with fake-TLS"
+    assert connected, "Telethon failed to connect through Teleproxy with fake-TLS"
     print("  Telethon connected through proxy via fake-TLS successfully")
 
 
@@ -935,10 +935,10 @@ def test_tls_data_after_handshake():
     This also validates that DRS conn_types have check_conn_functions called
     (missing defaults for .reader/.writer caused crashes pre-fix).
     """
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret = os.environ.get("MTPROXY_SECRET", "")
-    assert secret, "MTPROXY_SECRET not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret = os.environ.get("TELEPROXY_SECRET", "")
+    assert secret, "TELEPROXY_SECRET not set"
     secret_bytes = bytes.fromhex(secret)
 
     # Step 1: perform the TLS handshake
@@ -1098,8 +1098,8 @@ def main():
     print("Starting TLS E2E tests...\n", flush=True)
 
     # Wait for proxy to be ready (use proxy port, not stats — stats binds to localhost only)
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    proxy_port = os.environ.get("MTPROXY_PORT", "8443")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    proxy_port = os.environ.get("TELEPROXY_PORT", "8443")
     print(f"Waiting for proxy at {host}:{proxy_port}...", flush=True)
     if not wait_for_proxy(host, proxy_port, timeout=90):
         print("ERROR: Proxy not ready, aborting tests")

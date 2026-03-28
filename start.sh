@@ -4,6 +4,18 @@ set -e
 # Save original arguments before positional parameters are repurposed for secrets
 ORIG_ARGS="$*"
 
+# Backward-compat: accept old MTPROXY_* env vars with deprecation warning
+for _old_var in SECRET SECRET_1 SECRET_2 SECRET_3 SECRET_4 SECRET_5 SECRET_6 \
+  SECRET_7 SECRET_8 SECRET_9 SECRET_10 SECRET_11 SECRET_12 SECRET_13 SECRET_14 \
+  SECRET_15 SECRET_16; do
+    eval "_new_val=\${TELEPROXY_${_old_var}:-}"
+    eval "_old_val=\${MTPROXY_${_old_var}:-}"
+    if [ -z "$_new_val" ] && [ -n "$_old_val" ]; then
+        echo "WARNING: MTPROXY_${_old_var} is deprecated, use TELEPROXY_${_old_var} instead" >&2
+        eval "export TELEPROXY_${_old_var}=\"\$_old_val\""
+    fi
+done
+
 # Direct mode: connect to Telegram DCs without ME relay.
 # Must be explicitly enabled. Incompatible with PROXY_TAG.
 DIRECT_MODE=${DIRECT_MODE:-false}
@@ -134,7 +146,7 @@ for _s in "$@"; do
     SECRET_ARGS="$SECRET_ARGS -S $_s"
 done
 
-CMD="./mtproto-proxy -p $STATS_PORT -H $PORT$SECRET_ARGS -c $MAX_CONNECTIONS --http-stats --allow-skip-dh $NAT_INFO_ARGS"
+CMD="./teleproxy -p $STATS_PORT -H $PORT$SECRET_ARGS -c $MAX_CONNECTIONS --http-stats --allow-skip-dh $NAT_INFO_ARGS"
 
 if [ "$PREFER_IPV6" = "true" ]; then
     CMD="$CMD -6"
@@ -161,13 +173,13 @@ if [ -n "$IP_ALLOWLIST" ]; then
 fi
 
 if [ "$DIRECT_MODE" = "true" ]; then
-    CMD="$CMD --direct -M $WORKERS -u mtproxy $ORIG_ARGS"
+    CMD="$CMD --direct -M $WORKERS -u teleproxy $ORIG_ARGS"
     echo "Direct mode: connecting directly to Telegram DCs (no ME relay)"
 else
-    CMD="$CMD --aes-pwd proxy-secret data/proxy-multi.conf -M $WORKERS -u mtproxy $ORIG_ARGS"
+    CMD="$CMD --aes-pwd proxy-secret data/proxy-multi.conf -M $WORKERS -u teleproxy $ORIG_ARGS"
 fi
 
-echo "Starting MTProxy with command: $CMD"
+echo "Starting Teleproxy with command: $CMD"
 
 # Print ready-to-share connection links
 echo ""

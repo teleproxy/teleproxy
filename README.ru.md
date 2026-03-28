@@ -16,21 +16,21 @@
 
 ```bash
 # Скачать (amd64 или arm64)
-curl -Lo mtproto-proxy https://github.com/teleproxy/teleproxy/releases/latest/download/mtproto-proxy-linux-amd64
-chmod +x mtproto-proxy
+curl -Lo teleproxy https://github.com/teleproxy/teleproxy/releases/latest/download/teleproxy-linux-amd64
+chmod +x teleproxy
 
 # Сгенерировать секрет
 SECRET=$(head -c 16 /dev/urandom | xxd -ps)
 
 # Запустить в direct-режиме (проще всего — не нужны конфиг-файлы)
-./mtproto-proxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
+./teleproxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
 ```
 
 ### Docker (быстрый старт)
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   --restart unless-stopped \
@@ -45,14 +45,14 @@ docker run -d \
 Ссылки для подключения — в логах:
 
 ```bash
-docker logs mtproxy
+docker logs teleproxy
 ```
 
 ### Docker с Fake-TLS (EE-режим)
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e EE_DOMAIN=www.google.com \
@@ -64,7 +64,7 @@ docker run -d \
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e DIRECT_MODE=true \
@@ -96,7 +96,7 @@ echo -n "ee${SECRET}" && echo -n $DOMAIN | xxd -plain
 
 ### EE-режим с собственным TLS-бэкендом
 
-Запустите nginx с настоящим сертификатом за MTProxy. Невалидные подключения перенаправляются на nginx — сервер неотличим от обычного веб-сайта.
+Запустите nginx с настоящим сертификатом за Teleproxy. Невалидные подключения перенаправляются на nginx — сервер неотличим от обычного веб-сайта.
 
 **DRS (Dynamic Record Sizing):** TLS-записи автоматически варьируются по размеру, имитируя поведение реальных HTTPS-серверов. Никакой настройки не требуется.
 

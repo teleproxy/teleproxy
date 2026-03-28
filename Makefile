@@ -61,7 +61,7 @@ ALLDIRS := ${DEPDIRS} ${OBJDIRS}
 
 .PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-ip-acl test-drs-delays docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
 
-EXELIST	:= ${EXE}/mtproto-proxy
+EXELIST	:= ${EXE}/teleproxy
 
 
 OBJECTS	=	\
@@ -122,7 +122,7 @@ ${LIB_OBJS_NORMAL}: ${OBJ}/%.o: %.c | create_dirs_and_headers
 
 ${EXELIST}: ${LIBLIST}
 
-${EXE}/mtproto-proxy:	${OBJ}/src/mtproto/mtproto-proxy.o ${OBJ}/src/mtproto/mtproto-config.o ${OBJ}/src/mtproto/mtproto-dc-table.o ${OBJ}/src/net/net-tcp-rpc-ext-server.o
+${EXE}/teleproxy:	${OBJ}/src/mtproto/mtproto-proxy.o ${OBJ}/src/mtproto/mtproto-config.o ${OBJ}/src/mtproto/mtproto-dc-table.o ${OBJ}/src/net/net-tcp-rpc-ext-server.o
 	${CC} -o $@ $^ ${LIB}/libkdb.a ${LDFLAGS}
 
 ${LIB}/libkdb.a: ${LIB_OBJS}
@@ -144,98 +144,98 @@ force-clean: clean
 # Docker-based amd64 build and smoke test
 DOCKER ?= docker
 DOCKER_PLATFORM ?= linux/amd64
-DOCKER_TEST_IMAGE ?= mtproxy:test-amd64
+DOCKER_TEST_IMAGE ?= teleproxy:test-amd64
 
 docker-image-amd64:
 	${DOCKER} buildx build --platform ${DOCKER_PLATFORM} --load -t ${DOCKER_TEST_IMAGE} .
 
 docker-run-help-amd64: docker-image-amd64
-	${DOCKER} run --rm --platform ${DOCKER_PLATFORM} --entrypoint /opt/mtproxy/mtproto-proxy ${DOCKER_TEST_IMAGE} 2>&1 | grep -q "Invoking engine"
+	${DOCKER} run --rm --platform ${DOCKER_PLATFORM} --entrypoint /opt/teleproxy/teleproxy ${DOCKER_TEST_IMAGE} 2>&1 | grep -q "Invoking engine"
 
 docker-image-arm64:
-	${DOCKER} buildx build --platform linux/arm64 --load -t mtproxy:test-arm64 .
+	${DOCKER} buildx build --platform linux/arm64 --load -t teleproxy:test-arm64 .
 
 docker-run-help-arm64: docker-image-arm64
-	${DOCKER} run --rm --platform linux/arm64 --entrypoint /opt/mtproxy/mtproto-proxy mtproxy:test-arm64 2>&1 | grep -q "Invoking engine"
+	${DOCKER} run --rm --platform linux/arm64 --entrypoint /opt/teleproxy/teleproxy teleproxy:test-arm64 2>&1 | grep -q "Invoking engine"
 
 tests: docker-run-help-amd64
 	@echo "Smoke test passed: amd64 image builds and binary starts (--help)."
 
 test:
 	@# Generate secret if not provided
-	@if [ -z "$$MTPROXY_SECRET" ]; then \
-		export MTPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
-		echo "Generated MTPROXY_SECRET: $$MTPROXY_SECRET"; \
+	@if [ -z "$$TELEPROXY_SECRET" ]; then \
+		export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
+		echo "Generated TELEPROXY_SECRET: $$TELEPROXY_SECRET"; \
 	fi && \
-	export MTPROXY_SECRET=$${MTPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
-	echo "Using secret: $$MTPROXY_SECRET" && \
+	export TELEPROXY_SECRET=$${TELEPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
 	timeout 1200s docker compose -f tests/docker-compose.test.yml up --build --exit-code-from tester || \
 		(echo "Test timed out or failed"; docker compose -f tests/docker-compose.test.yml down; exit 1)
 
 test-tls:
-	@if [ -z "$$MTPROXY_SECRET" ]; then \
-		export MTPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
-		echo "Generated MTPROXY_SECRET: $$MTPROXY_SECRET"; \
+	@if [ -z "$$TELEPROXY_SECRET" ]; then \
+		export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
+		echo "Generated TELEPROXY_SECRET: $$TELEPROXY_SECRET"; \
 	fi && \
-	export MTPROXY_SECRET=$${MTPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
-	echo "Using secret: $$MTPROXY_SECRET" && \
+	export TELEPROXY_SECRET=$${TELEPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
 	timeout 300s docker compose -f tests/docker-compose.tls-test.yml up --build --exit-code-from tester || \
 		(echo "TLS test timed out or failed"; \
-		docker compose -f tests/docker-compose.tls-test.yml logs mtproxy; \
+		docker compose -f tests/docker-compose.tls-test.yml logs teleproxy; \
 		docker compose -f tests/docker-compose.tls-test.yml down; exit 1)
 	docker compose -f tests/docker-compose.tls-test.yml down
 
 test-multi-secret:
-	@export MTPROXY_SECRET_1=$$(head -c 16 /dev/urandom | xxd -ps) && \
-	export MTPROXY_SECRET_2=$$(head -c 16 /dev/urandom | xxd -ps) && \
-	echo "Using secrets: $$MTPROXY_SECRET_1, $$MTPROXY_SECRET_2" && \
+	@export TELEPROXY_SECRET_1=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	export TELEPROXY_SECRET_2=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	echo "Using secrets: $$TELEPROXY_SECRET_1, $$TELEPROXY_SECRET_2" && \
 	timeout 300s docker compose -f tests/docker-compose.multi-secret-test.yml up --build --exit-code-from tester || \
 		(echo "Multi-secret test timed out or failed"; \
-		docker compose -f tests/docker-compose.multi-secret-test.yml logs mtproxy; \
+		docker compose -f tests/docker-compose.multi-secret-test.yml logs teleproxy; \
 		docker compose -f tests/docker-compose.multi-secret-test.yml down; exit 1)
 	@echo "Checking connection link output in proxy logs..."
-	@docker compose -f tests/docker-compose.multi-secret-test.yml logs mtproxy 2>&1 | grep -q "t.me/proxy" || \
+	@docker compose -f tests/docker-compose.multi-secret-test.yml logs teleproxy 2>&1 | grep -q "t.me/proxy" || \
 		(echo "FAIL: No connection links found in proxy logs"; exit 1)
 	docker compose -f tests/docker-compose.multi-secret-test.yml down
 
 test-secret-limit:
-	@export MTPROXY_SECRET_1=$$(head -c 16 /dev/urandom | xxd -ps) && \
-	export MTPROXY_SECRET_2=$$(head -c 16 /dev/urandom | xxd -ps) && \
-	echo "Using secrets: $$MTPROXY_SECRET_1 (unlimited), $$MTPROXY_SECRET_2 (limit=5)" && \
+	@export TELEPROXY_SECRET_1=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	export TELEPROXY_SECRET_2=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	echo "Using secrets: $$TELEPROXY_SECRET_1 (unlimited), $$TELEPROXY_SECRET_2 (limit=5)" && \
 	timeout 300s docker compose -f tests/docker-compose.secret-limit-test.yml up --build --exit-code-from tester || \
 		(echo "Secret limit test timed out or failed"; \
-		docker compose -f tests/docker-compose.secret-limit-test.yml logs mtproxy; \
+		docker compose -f tests/docker-compose.secret-limit-test.yml logs teleproxy; \
 		docker compose -f tests/docker-compose.secret-limit-test.yml down; exit 1)
 	docker compose -f tests/docker-compose.secret-limit-test.yml down
 
 test-ip-acl:
-	@if [ -z "$$MTPROXY_SECRET" ]; then \
-		export MTPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
-		echo "Generated MTPROXY_SECRET: $$MTPROXY_SECRET"; \
+	@if [ -z "$$TELEPROXY_SECRET" ]; then \
+		export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
+		echo "Generated TELEPROXY_SECRET: $$TELEPROXY_SECRET"; \
 	fi && \
-	export MTPROXY_SECRET=$${MTPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
-	echo "Using secret: $$MTPROXY_SECRET" && \
+	export TELEPROXY_SECRET=$${TELEPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
 	docker compose -f tests/docker-compose.ip-acl-test.yml build && \
-	docker compose -f tests/docker-compose.ip-acl-test.yml up -d --wait mtproxy && \
+	docker compose -f tests/docker-compose.ip-acl-test.yml up -d --wait teleproxy && \
 	echo "Phase 1: testing blocked connections..." && \
 	docker compose -f tests/docker-compose.ip-acl-test.yml run --rm blocked-tester && \
 	echo "Phase 2: testing allowed connections..." && \
 	docker compose -f tests/docker-compose.ip-acl-test.yml run --rm tester || \
 		(echo "IP ACL test failed"; \
-		docker compose -f tests/docker-compose.ip-acl-test.yml logs mtproxy; \
+		docker compose -f tests/docker-compose.ip-acl-test.yml logs teleproxy; \
 		docker compose -f tests/docker-compose.ip-acl-test.yml down -v; exit 1)
 	docker compose -f tests/docker-compose.ip-acl-test.yml down -v
 
 test-drs-delays:
-	@if [ -z "$$MTPROXY_SECRET" ]; then \
-		export MTPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
-		echo "Generated MTPROXY_SECRET: $$MTPROXY_SECRET"; \
+	@if [ -z "$$TELEPROXY_SECRET" ]; then \
+		export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps); \
+		echo "Generated TELEPROXY_SECRET: $$TELEPROXY_SECRET"; \
 	fi && \
-	export MTPROXY_SECRET=$${MTPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
-	echo "Using secret: $$MTPROXY_SECRET" && \
+	export TELEPROXY_SECRET=$${TELEPROXY_SECRET:-$$(head -c 16 /dev/urandom | xxd -ps)} && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
 	timeout 300s docker compose -f tests/docker-compose.drs-delays-test.yml up --build --exit-code-from tester || \
 		(echo "DRS delays test timed out or failed"; \
-		docker compose -f tests/docker-compose.drs-delays-test.yml logs mtproxy; \
+		docker compose -f tests/docker-compose.drs-delays-test.yml logs teleproxy; \
 		docker compose -f tests/docker-compose.drs-delays-test.yml down; exit 1)
 	docker compose -f tests/docker-compose.drs-delays-test.yml down
 

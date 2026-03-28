@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""E2E tests for MTProxy direct mode.
+"""E2E tests for Teleproxy direct mode.
 
-Starts a real Telethon session through a direct-mode MTProxy and calls
+Starts a real Telethon session through a direct-mode Teleproxy and calls
 get_me() to verify the full data path works.  Tests both obfuscated2
 (dd-prefix) and fake-TLS (ee-prefix) transport modes.
 
@@ -16,11 +16,11 @@ Requires the TG_STRING_SESSION environment variable (Telethon StringSession).
 Skips gracefully when the secret is absent (fork PRs, external contributors).
 
 Usage:
-    TG_STRING_SESSION=... MTPROXY_SECRET=... python3 tests/test_direct_e2e.py
+    TG_STRING_SESSION=... TELEPROXY_SECRET=... python3 tests/test_direct_e2e.py
 
 Environment variables:
     TG_STRING_SESSION   Telethon StringSession string (required)
-    MTPROXY_SECRET      32-char hex proxy secret (required)
+    TELEPROXY_SECRET      32-char hex proxy secret (required)
     DIRECT_HOST         Proxy hostname (default: localhost)
     DIRECT_OBFS2_PORT   Obfuscated2 proxy port (default: 8443)
     DIRECT_TLS_PORT     Fake-TLS proxy port (default: 9443)
@@ -303,9 +303,9 @@ def main():
         print("SKIP: TG_STRING_SESSION not set (secrets not available)")
         sys.exit(0)
 
-    secret = os.environ.get("MTPROXY_SECRET", "")
+    secret = os.environ.get("TELEPROXY_SECRET", "")
     if not secret:
-        print("ERROR: MTPROXY_SECRET required")
+        print("ERROR: TELEPROXY_SECRET required")
         sys.exit(1)
 
     host = os.environ.get("DIRECT_HOST", "localhost")

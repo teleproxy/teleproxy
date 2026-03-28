@@ -14,14 +14,14 @@ Pre-built static binaries (musl libc, zero dependencies) are available for every
 
 ```bash
 # Download (choose amd64 or arm64)
-curl -Lo mtproto-proxy https://github.com/teleproxy/teleproxy/releases/latest/download/mtproto-proxy-linux-amd64
-chmod +x mtproto-proxy
+curl -Lo teleproxy https://github.com/teleproxy/teleproxy/releases/latest/download/teleproxy-linux-amd64
+chmod +x teleproxy
 
 # Generate a secret
 SECRET=$(head -c 16 /dev/urandom | xxd -ps)
 
 # Run in direct mode (simplest — no config files needed)
-./mtproto-proxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
+./teleproxy -S "$SECRET" -H 443 --direct -p 8888 --aes-pwd /dev/null
 ```
 
 Binaries are available for `linux/amd64` and `linux/arm64`. SHA256 checksums are published alongside each release.
@@ -48,7 +48,7 @@ git clone https://github.com/teleproxy/teleproxy
 cd teleproxy
 ```
 
-To build, simply run `make`, the binary will be in `objs/bin/mtproto-proxy`:
+To build, simply run `make`, the binary will be in `objs/bin/teleproxy`:
 
 ```bash
 make && cd objs/bin
@@ -64,7 +64,7 @@ To run the tests using Docker:
 
 ```bash
 # Export environment variables (see TESTING.md)
-export MTPROXY_SECRET=...
+export TELEPROXY_SECRET=...
 make test
 ```
 
@@ -81,12 +81,12 @@ curl --connect-timeout 10 --max-time 30 --retry 3 -fsSL https://core.telegram.or
 ```bash
 head -c 16 /dev/urandom | xxd -ps
 ```
-4. Run `mtproto-proxy`:
+4. Run `teleproxy`:
 ```bash
-./mtproto-proxy -u nobody -p 8888 -H 443 -S <secret> --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
+./teleproxy -u nobody -p 8888 -H 443 -S <secret> --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
 ```
 ... where:
-- `nobody` is the username. `mtproto-proxy` calls `setuid()` to drop privilegies.
+- `nobody` is the username. `teleproxy` calls `setuid()` to drop privilegies.
 - `443` is the port, used by clients to connect to the proxy.
 - `8888` is the local port for statistics (requires `--http-stats`). Like `curl http://localhost:8888/stats`. Stats are accessible from private networks (loopback, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) but not from public IPs.
 - `<secret>` is the secret generated at step 3. Also you can set multiple secrets: `-S <secret1> -S <secret2>`. Each secret can have an optional label: `-S <secret>:family -S <secret>:friends`. Labels appear in logs and stats instead of raw secrets, making it easy to identify which secret a connection used. You can also set a per-secret connection limit: `-S <secret>:family:1000` (see [Per-Secret Connection Limits](#per-secret-connection-limits)).
@@ -94,14 +94,14 @@ head -c 16 /dev/urandom | xxd -ps
 - `proxy-secret` and `proxy-multi.conf` are obtained at steps 1 and 2.
 - `1` is the number of workers. You can increase the number of workers, if you have a powerful server.
 
-Also feel free to check out other options using `mtproto-proxy --help`.
+Also feel free to check out other options using `teleproxy --help`.
 
 ### IP Access Control
 
 Restrict client connections by IP address using CIDR-based blocklist/allowlist files:
 
 ```bash
-./mtproto-proxy ... --ip-blocklist blocklist.txt --ip-allowlist allowlist.txt
+./teleproxy ... --ip-blocklist blocklist.txt --ip-allowlist allowlist.txt
 ```
 
 File format (one CIDR range per line, `#` comments allowed):
@@ -115,7 +115,7 @@ File format (one CIDR range per line, `#` comments allowed):
 - `--ip-allowlist`: only matching IPs are accepted (whitelist mode)
 - `--ip-blocklist`: matching IPs are rejected
 - Files are reloaded on `SIGHUP` — update rules without restarting the proxy
-- Rejected connections are tracked via Prometheus metric `mtproxy_ip_acl_rejected_total`
+- Rejected connections are tracked via Prometheus metric `teleproxy_ip_acl_rejected_total`
 
 5. Generate the link with following schema: `tg://proxy?server=SERVER_NAME&port=PORT&secret=SECRET` (or let the official bot generate it for you).
 6. Register your proxy with [@MTProxybot](https://t.me/MTProxybot) on Telegram.
@@ -124,17 +124,17 @@ File format (one CIDR range per line, `#` comments allowed):
 
 ### Direct-to-DC Mode
 
-By default, MTProxy routes traffic through Telegram's middle-end (ME) relay servers listed in `proxy-multi.conf`. Direct mode bypasses the ME relays and connects straight to Telegram data centers, reducing latency and simplifying deployment:
+By default, Teleproxy routes traffic through Telegram's middle-end (ME) relay servers listed in `proxy-multi.conf`. Direct mode bypasses the ME relays and connects straight to Telegram data centers, reducing latency and simplifying deployment:
 
 ```
-Default:  Client → MTProxy → ME relay (proxy-multi.conf) → Telegram DC
-Direct:   Client → MTProxy → Telegram DC
+Default:  Client → Teleproxy → ME relay (proxy-multi.conf) → Telegram DC
+Direct:   Client → Teleproxy → Telegram DC
 ```
 
 To enable direct mode, use `--direct`:
 
 ```bash
-./mtproto-proxy -u nobody -p 8888 -H 443 -S <secret> --http-stats --direct
+./teleproxy -u nobody -p 8888 -H 443 -S <secret> --http-stats --direct
 ```
 
 In direct mode:
@@ -145,11 +145,11 @@ In direct mode:
 
 ## Using IPv6
 
-MTProxy supports IPv6. To enable it, pass the `-6` flag and specify only port numbers to `-H` (do not include an address like `[::]:443`).
+Teleproxy supports IPv6. To enable it, pass the `-6` flag and specify only port numbers to `-H` (do not include an address like `[::]:443`).
 
 ### Example (direct run)
 ```bash
-./mtproto-proxy -6 -u nobody -p 8888 -H 443 -S <secret> --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
+./teleproxy -6 -u nobody -p 8888 -H 443 -S <secret> --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
 ```
 
 - `-6` enables IPv6 listening. The proxy binds to `::` (all IPv6 interfaces). On most systems this also accepts IPv4 connections on the same port (dual-stack), unless the kernel forces IPv6-only.
@@ -188,13 +188,13 @@ Examples:
 ### Systemd example (IPv6)
 ```ini
 [Unit]
-Description=MTProxy (IPv6)
+Description=Teleproxy (IPv6)
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/MTProxy
-ExecStart=/opt/MTProxy/mtproto-proxy -6 -u nobody -p 8888 -H 443 -S <secret> --http-stats -P <proxy tag> --aes-pwd proxy-secret proxy-multi.conf -M 1
+WorkingDirectory=/opt/teleproxy
+ExecStart=/opt/teleproxy/teleproxy -6 -u nobody -p 8888 -H 443 -S <secret> --http-stats -P <proxy tag> --aes-pwd proxy-secret proxy-multi.conf -M 1
 Restart=on-failure
 
 [Install]
@@ -204,14 +204,14 @@ WantedBy=multi-user.target
 ### Docker notes (IPv6)
 - Ensure Docker daemon has IPv6 enabled and the host has routable IPv6.
 - Port publishing must include IPv6 (Docker binds to IPv6 only if daemon IPv6 is enabled). See Docker docs for `daemon.json` (`"ipv6": true`, `"fixed-cidr-v6": "…/64"`).
-- The provided image’s default entrypoint does not add `-6`. To use IPv6, either run MTProxy on the host, or build/override the container command to include `-6`.
+- The provided image’s default entrypoint does not add `-6`. To use IPv6, either run Teleproxy on the host, or build/override the container command to include `-6`.
 
 ## Transport Modes and Secret Prefixes
 
-MTProxy supports different transport modes that provide various levels of obfuscation:
+Teleproxy supports different transport modes that provide various levels of obfuscation:
 
 ### DD Mode (Random Padding)
-Due to some ISPs detecting MTProxy by packet sizes, random padding is added to packets when this mode is enabled.
+Due to some ISPs detecting MTProto proxy by packet sizes, random padding is added to packets when this mode is enabled.
 
 **Client Setup**: Add `dd` prefix to secret (`cafe...babe` => `ddcafe...babe`)
 
@@ -219,12 +219,12 @@ Due to some ISPs detecting MTProxy by packet sizes, random padding is added to p
 
 ### EE Mode (Fake-TLS + Padding)
 
-EE mode provides enhanced obfuscation by mimicking TLS 1.3 connections, making MTProxy traffic harder to detect and block.
+EE mode provides enhanced obfuscation by mimicking TLS 1.3 connections, making proxy traffic harder to detect and block.
 
 **Server Setup**:
 1. **Add domain configuration**: Choose a website that supports TLS 1.3 (e.g., `www.google.com`, `www.cloudflare.com`)
    ```bash
-   ./mtproto-proxy -u nobody -p 8888 -H 443 -S <secret> -D www.google.com --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
+   ./teleproxy -u nobody -p 8888 -H 443 -S <secret> -D www.google.com --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
    ```
 
 2. **Get domain HEX dump**:
@@ -258,20 +258,20 @@ echo -n "ee${SECRET}" && echo -n $DOMAIN | xxd -plain
 
 ### EE Mode with Custom TLS Backend (TCP Splitting)
 
-Instead of mimicking a public website, you can run your own web server (e.g., nginx) behind MTProxy with a real TLS certificate for your domain. Non-MTProxy visitors see a fully functioning HTTPS website, making the server indistinguishable from a normal web server.
+Instead of mimicking a public website, you can run your own web server (e.g., nginx) behind Teleproxy with a real TLS certificate for your domain. Non-proxy visitors see a fully functioning HTTPS website, making the server indistinguishable from a normal web server.
 
 **How it works:**
-- MTProxy listens on port 443
+- Teleproxy listens on port 443
 - nginx runs on a non-standard port (e.g., 8443) with a valid certificate for your domain
-- The domain's DNS A record points to the MTProxy server
-- Valid MTProxy clients connect normally; all other traffic is forwarded to nginx
+- The domain's DNS A record points to the Teleproxy server
+- Valid Teleproxy clients connect normally; all other traffic is forwarded to nginx
 
-**Active probing resistance:** Every connection that fails MTProxy validation — wrong secret, expired timestamp, unknown SNI, replayed handshake, malformed ClientHello, or plain non-TLS traffic — is transparently forwarded to the backend rather than rejected with a TLS error. Anyone probing the server with a standard browser sees a real HTTPS website, making the proxy indistinguishable from a normal web server under active probing.
+**Active probing resistance:** Every connection that fails Teleproxy validation — wrong secret, expired timestamp, unknown SNI, replayed handshake, malformed ClientHello, or plain non-TLS traffic — is transparently forwarded to the backend rather than rejected with a TLS error. Anyone probing the server with a standard browser sees a real HTTPS website, making the proxy indistinguishable from a normal web server under active probing.
 
 **Dynamic Record Sizing (DRS):** TLS connections automatically use graduated record sizes that mimic real HTTPS servers (Cloudflare, Go, Caddy): small MTU-sized records during TCP slow-start (~1450 bytes), ramping to ~4096 bytes, then max TLS payload (~16144 bytes). This defeats statistical traffic analysis that fingerprints proxy traffic by its uniform record sizes. No configuration needed — DRS activates automatically for all TLS connections.
 
 **Requirements:**
-- The backend must support **TLS 1.3** (MTProxy verifies this at startup)
+- The backend must support **TLS 1.3** (Teleproxy verifies this at startup)
 - The `-D` value **must be a hostname**, not a raw IP address. Using an IP address (e.g., `-D 127.0.0.1:8443`) breaks `ee` secrets because TLS SNI does not support IP addresses (RFC 6066)
 
 **Setup:**
@@ -294,17 +294,17 @@ Instead of mimicking a public website, you can run your own web server (e.g., ng
        }
    }
    ```
-   > **Certificate renewal**: Use certbot with DNS-01 challenge (`--preferred-challenges dns`). HTTP-01 challenge will not work because MTProxy occupies port 443.
+   > **Certificate renewal**: Use certbot with DNS-01 challenge (`--preferred-challenges dns`). HTTP-01 challenge will not work because Teleproxy occupies port 443.
 
-2. Add an `/etc/hosts` entry so MTProxy resolves the domain to loopback (needed when nginx only listens on `127.0.0.1`):
+2. Add an `/etc/hosts` entry so Teleproxy resolves the domain to loopback (needed when nginx only listens on `127.0.0.1`):
    ```
    127.0.0.1 mywebsite.com
    ```
    > **Note**: If nginx listens on all interfaces (`0.0.0.0:8443`) and the domain's DNS already points to this server, you can skip the `/etc/hosts` entry.
 
-3. Run MTProxy with the domain and port:
+3. Run Teleproxy with the domain and port:
    ```bash
-   ./mtproto-proxy -u nobody -p 8888 -H 443 -S <secret> -D mywebsite.com:8443 --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
+   ./teleproxy -u nobody -p 8888 -H 443 -S <secret> -D mywebsite.com:8443 --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1
    ```
 
 4. Generate the client `ee` secret as usual (using `mywebsite.com` as the domain):
@@ -316,19 +316,19 @@ Instead of mimicking a public website, you can run your own web server (e.g., ng
 ## Systemd example configuration
 1. Create systemd service file (it's standard path for the most Linux distros, but you should check it before):
 ```bash
-nano /etc/systemd/system/MTProxy.service
+nano /etc/systemd/system/teleproxy.service
 ```
 2. Edit this basic service (especially paths and params):
 ```bash
 [Unit]
-Description=MTProxy
+Description=Teleproxy
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/MTProxy
-ExecStart=/opt/MTProxy/mtproto-proxy -u nobody -p 8888 -H 443 -S <secret> -P <proxy tag> <other params>
-ExecStart=/opt/MTProxy/mtproto-proxy -u nobody -p 8888 -H 443 -S <secret> --http-stats -P <proxy tag> <other params>
+WorkingDirectory=/opt/teleproxy
+ExecStart=/opt/teleproxy/teleproxy -u nobody -p 8888 -H 443 -S <secret> -P <proxy tag> <other params>
+ExecStart=/opt/teleproxy/teleproxy -u nobody -p 8888 -H 443 -S <secret> --http-stats -P <proxy tag> <other params>
 Restart=on-failure
 
 [Install]
@@ -338,26 +338,26 @@ WantedBy=multi-user.target
 ```bash
 systemctl daemon-reload
 ```
-4. Test fresh MTProxy service:
+4. Test fresh Teleproxy service:
 ```bash
-systemctl restart MTProxy.service
+systemctl restart teleproxy.service
 # Check status, it should be active
-systemctl status MTProxy.service
+systemctl status teleproxy.service
 ```
 5. Enable it, to autostart service after reboot:
 ```bash
-systemctl enable MTProxy.service
+systemctl enable teleproxy.service
 ```
 
 ## Docker
 
 ### Quick Start
 
-The simplest way to run MTProxy - no configuration needed:
+The simplest way to run Teleproxy - no configuration needed:
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   --restart unless-stopped \
@@ -374,7 +374,7 @@ The container automatically:
 The container prints ready-to-share connection links in the logs:
 
 ```bash
-docker logs mtproxy
+docker logs teleproxy
 # ===== Connection Links =====
 # https://t.me/proxy?server=203.0.113.1&port=443&secret=eecafe...
 # =============================
@@ -388,12 +388,12 @@ For more control, specify environment variables:
 
 ```bash
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
   -e SECRET=$(head -c 16 /dev/urandom | xxd -ps) \
   -e PROXY_TAG=your_proxy_tag_here \
-  -v mtproxy-data:/opt/mtproxy/data \
+  -v teleproxy-data:/opt/teleproxy/data \
   --restart unless-stopped \
   ghcr.io/teleproxy/teleproxy:latest
 ```
@@ -417,7 +417,7 @@ docker run -d \
 - `RANDOM_PADDING`: Enable random padding only mode (true/false, default: false)
 - `EXTERNAL_IP`: Your public IP address for NAT environments (optional)
 - `EE_DOMAIN`: Domain for EE Mode (Fake-TLS + Padding), e.g. `www.google.com`. Accepts `host:port` for custom TLS backends (e.g., `mywebsite.com:8443`). See [Custom TLS Backend](#ee-mode-with-custom-tls-backend-tcp-splitting)
-- `IP_BLOCKLIST`: Path (inside container) to a file with CIDR ranges to reject (one per line, `#` comments allowed). Example: `--ip-blocklist /opt/mtproxy/blocklist.txt`
+- `IP_BLOCKLIST`: Path (inside container) to a file with CIDR ranges to reject (one per line, `#` comments allowed). Example: `--ip-blocklist /opt/teleproxy/blocklist.txt`
 - `IP_ALLOWLIST`: Path (inside container) to a file with CIDR ranges to exclusively allow. When set, only matching IPs are accepted. Both IPv4 and IPv6 CIDR notation supported. Files are reloaded on `SIGHUP`.
 
 #### Getting Statistics
@@ -440,7 +440,7 @@ The simplest Docker Compose setup (create `docker-compose.yml`):
 
 ```yaml
 services:
-  mtproxy:
+  teleproxy:
     image: ghcr.io/teleproxy/teleproxy:latest
     ports:
       - "443:443"
@@ -451,7 +451,7 @@ services:
 Then run:
 ```bash
 docker-compose up -d
-docker-compose logs mtproxy | grep "Generated secret"
+docker-compose logs teleproxy | grep "Generated secret"
 ```
 
 For custom configuration, create a `.env` file:
@@ -479,7 +479,7 @@ secrets or monitoring per-group traffic:
 
 ```bash
 # Inline labels (CLI)
-./mtproto-proxy ... -S cafe1234567890abcdef1234567890ab:family -S dead1234567890abcdef1234567890ef:friends
+./teleproxy ... -S cafe1234567890abcdef1234567890ab:family -S dead1234567890abcdef1234567890ef:friends
 
 # Inline labels (Docker)
 SECRET=cafe1234567890abcdef1234567890ab:family,dead1234567890abcdef1234567890ef:friends
@@ -493,7 +493,7 @@ SECRET_LABEL_2=friends
 
 Labels appear in:
 - **Logs**: `TLS handshake matched secret [family] from 1.2.3.4:12345`
-- **Prometheus** (`/metrics`): `mtproxy_secret_connections{secret="family"} 3`
+- **Prometheus** (`/metrics`): `teleproxy_secret_connections{secret="family"} 3`
 - **Stats** (`/stats`): `secret_family_connections	3`
 
 If no label is given, secrets are auto-labeled `secret_0`, `secret_1`, etc.
@@ -507,10 +507,10 @@ a maximum number of concurrent connections per secret:
 
 ```bash
 # CLI: append :LIMIT after the label
-./mtproto-proxy ... -S cafe...90ab:family:1000 -S dead...90ef:public:200
+./teleproxy ... -S cafe...90ab:family:1000 -S dead...90ef:public:200
 
 # Without a label, use an empty label field
-./mtproto-proxy ... -S cafe...90ab::500
+./teleproxy ... -S cafe...90ab::500
 
 # Docker: numbered env vars
 SECRET_1=cafe1234567890abcdef1234567890ab
@@ -536,15 +536,15 @@ For single-worker mode (`-M 0` or `-M 1`), the limit is exact.
 
 Limits appear in stats and Prometheus metrics:
 - **Stats** (`/stats`): `secret_family_limit	1000`, `secret_family_rejected	42`
-- **Prometheus** (`/metrics`): `mtproxy_secret_connection_limit{secret="family"} 1000`,
-  `mtproxy_secret_connections_rejected_total{secret="family"} 42`
+- **Prometheus** (`/metrics`): `teleproxy_secret_connection_limit{secret="family"} 1000`,
+  `teleproxy_secret_connections_rejected_total{secret="family"} 42`
 
 Secrets without a limit are unlimited (the default, backward-compatible behavior).
 
 And reference it in your `docker-compose.yml`:
 ```yaml
 services:
-  mtproxy:
+  teleproxy:
     image: ghcr.io/teleproxy/teleproxy:latest
     ports:
       - "443:443"
@@ -561,17 +561,17 @@ services:
 If you want to build the image yourself:
 
 ```bash
-docker build -t mtproxy .
+docker build -t teleproxy .
 docker run -d \
-  --name mtproxy \
+  --name teleproxy \
   -p 443:443 \
   -p 8888:8888 \
-  mtproxy
+  teleproxy
 ```
 
 Check the logs to find your auto-generated secret:
 ```bash
-docker logs mtproxy 2>&1 | grep "Generated secret"
+docker logs teleproxy 2>&1 | grep "Generated secret"
 ```
 
 ### Health Check
@@ -597,14 +597,14 @@ No user configuration is needed — this runs automatically.
 
 ### Volume Mounting
 
-The container stores `proxy-multi.conf` (Telegram DC addresses) in `/opt/mtproxy/data/`. Mount a volume to persist this configuration across container restarts. The `proxy-secret` file is baked into the image at build time and does not require persistence.
+The container stores `proxy-multi.conf` (Telegram DC addresses) in `/opt/teleproxy/data/`. Mount a volume to persist this configuration across container restarts. The `proxy-secret` file is baked into the image at build time and does not require persistence.
 
 If `core.telegram.org` is unreachable (e.g., due to network restrictions), the container will use a cached `proxy-multi.conf` from the data volume when available. On first run without network access, you must manually place `proxy-multi.conf` in the data volume.
 
 Mount a volume:
 
 ```bash
--v /path/to/host/data:/opt/mtproxy/data
+-v /path/to/host/data:/opt/teleproxy/data
 ```
 
 ### Available Tags

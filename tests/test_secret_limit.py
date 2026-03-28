@@ -37,8 +37,8 @@ def _get_metrics(host, stats_port):
 
 def test_limit_in_plain_stats():
     """Verify per-secret limit and rejected counter appear in /stats."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = os.environ.get("MTPROXY_STATS_PORT", "8888")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = os.environ.get("TELEPROXY_STATS_PORT", "8888")
 
     stats = _get_stats(host, stats_port)
 
@@ -61,18 +61,18 @@ def test_limit_in_plain_stats():
 
 def test_limit_in_prometheus_metrics():
     """Verify per-secret limit and rejected counter appear in /metrics."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    stats_port = os.environ.get("MTPROXY_STATS_PORT", "8888")
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    stats_port = os.environ.get("TELEPROXY_STATS_PORT", "8888")
 
     metrics = _get_metrics(host, stats_port)
 
-    assert 'mtproxy_secret_connection_limit{secret="limited"} 5' in metrics, (
+    assert 'teleproxy_secret_connection_limit{secret="limited"} 5' in metrics, (
         f"Expected limit=5 for 'limited' secret in Prometheus metrics:\n{metrics}"
     )
-    assert 'mtproxy_secret_connection_limit{secret="unlimited"} 0' in metrics, (
+    assert 'teleproxy_secret_connection_limit{secret="unlimited"} 0' in metrics, (
         f"Expected limit=0 for 'unlimited' secret in Prometheus metrics:\n{metrics}"
     )
-    assert 'mtproxy_secret_connections_rejected_total{secret="limited"}' in metrics, (
+    assert 'teleproxy_secret_connections_rejected_total{secret="limited"}' in metrics, (
         f"Expected rejected counter for 'limited' secret:\n{metrics}"
     )
     print("  Prometheus metrics: limit and rejected counters present")
@@ -80,10 +80,10 @@ def test_limit_in_prometheus_metrics():
 
 def test_unlimited_secret_still_works():
     """Verify unlimited secret still accepts connections normally."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET_1", "")
-    assert secret_hex, "MTPROXY_SECRET_1 not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET_1", "")
+    assert secret_hex, "TELEPROXY_SECRET_1 not set"
 
     secret_bytes = bytes.fromhex(secret_hex)
     data, client_random = _do_handshake(host, port, secret_bytes)
@@ -95,10 +95,10 @@ def test_unlimited_secret_still_works():
 
 def test_limited_secret_accepts_under_limit():
     """Verify limited secret accepts connections when under limit."""
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
-    secret_hex = os.environ.get("MTPROXY_SECRET_2", "")
-    assert secret_hex, "MTPROXY_SECRET_2 not set"
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
+    secret_hex = os.environ.get("TELEPROXY_SECRET_2", "")
+    assert secret_hex, "TELEPROXY_SECRET_2 not set"
 
     secret_bytes = bytes.fromhex(secret_hex)
     data, client_random = _do_handshake(host, port, secret_bytes)
@@ -116,8 +116,8 @@ def main():
         ("test_limited_secret_accepts_under_limit", test_limited_secret_accepts_under_limit),
     ]
 
-    host = os.environ.get("MTPROXY_HOST", "mtproxy")
-    port = int(os.environ.get("MTPROXY_PORT", "8443"))
+    host = os.environ.get("TELEPROXY_HOST", "teleproxy")
+    port = int(os.environ.get("TELEPROXY_PORT", "8443"))
 
     print("Starting secret limit tests...\n", flush=True)
     print(f"Waiting for proxy at {host}:{port}...", flush=True)

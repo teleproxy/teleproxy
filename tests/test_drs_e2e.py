@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """E2E test for Dynamic Record Sizing (DRS).
 
-Connects to a DRS-enabled MTProxy via TelethonFakeTLS with a real Telegram
+Connects to a DRS-enabled Teleproxy via TelethonFakeTLS with a real Telegram
 session and calls get_me() to verify the full data path works correctly
 with variable TLS record sizes.
 
@@ -11,7 +11,7 @@ Usage:
         --domain DOMAIN --session SESSION_PATH
 
 Environment variables (alternative to CLI args):
-    MTPROXY_HOST, MTPROXY_PORT, MTPROXY_SECRET, EE_DOMAIN,
+    TELEPROXY_HOST, TELEPROXY_PORT, TELEPROXY_SECRET, EE_DOMAIN,
     TGP_API_ID, TGP_API_HASH, TELETHON_SESSION
 """
 
@@ -68,7 +68,7 @@ def _patch_telethon_faketls():
 
 
 async def run_test(host, port, secret, domain, session_path, api_id, api_hash):
-    """Connect through MTProxy and call get_me()."""
+    """Connect through Teleproxy and call get_me()."""
     from telethon import TelegramClient
     from TelethonFakeTLS import ConnectionTcpMTProxyFakeTLS
 
@@ -119,11 +119,11 @@ async def run_test(host, port, secret, domain, session_path, api_id, api_hash):
 
 def main():
     parser = argparse.ArgumentParser(description="DRS E2E test")
-    parser.add_argument("--host", default=os.environ.get("MTPROXY_HOST", "127.0.0.1"))
+    parser.add_argument("--host", default=os.environ.get("TELEPROXY_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int,
-                        default=int(os.environ.get("MTPROXY_PORT", "443")))
+                        default=int(os.environ.get("TELEPROXY_PORT", "443")))
     parser.add_argument("--secret",
-                        default=os.environ.get("MTPROXY_SECRET", ""))
+                        default=os.environ.get("TELEPROXY_SECRET", ""))
     parser.add_argument("--domain",
                         default=os.environ.get("EE_DOMAIN", "google.com"))
     parser.add_argument("--session",
@@ -136,7 +136,7 @@ def main():
     args = parser.parse_args()
 
     if not args.secret:
-        print("ERROR: --secret or MTPROXY_SECRET required")
+        print("ERROR: --secret or TELEPROXY_SECRET required")
         sys.exit(1)
     if not args.api_id or not args.api_hash:
         print("ERROR: --api-id/--api-hash or TGP_API_ID/TGP_API_HASH required")

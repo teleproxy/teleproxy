@@ -75,7 +75,7 @@
 #define VERSION "unknown"
 #endif
 
-#define VERSION_STR	"mtproxy-" VERSION
+#define VERSION_STR	"teleproxy-" VERSION
 const char FullVersionStr[] = VERSION_STR " compiled at " __DATE__ " " __TIME__ " by gcc " __VERSION__ " "
 #ifdef __LP64__
   "64-bit"
@@ -816,81 +816,81 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
 
   /* counters */
   sb_printf (sb,
-	     "# HELP mtproxy_queries_total Total client queries received.\n"
-	     "# TYPE mtproxy_queries_total counter\n"
-	     "mtproxy_queries_total %lld\n"
-	     "# HELP mtproxy_forwarded_queries_total Total queries forwarded to Telegram DCs.\n"
-	     "# TYPE mtproxy_forwarded_queries_total counter\n"
-	     "mtproxy_forwarded_queries_total %lld\n"
-	     "# HELP mtproxy_expired_queries_total Queries that expired waiting for a response.\n"
-	     "# TYPE mtproxy_expired_queries_total counter\n"
-	     "mtproxy_expired_queries_total %lld\n"
-	     "# HELP mtproxy_dropped_queries_total Queries dropped with nowhere to forward.\n"
-	     "# TYPE mtproxy_dropped_queries_total counter\n"
-	     "mtproxy_dropped_queries_total %lld\n"
-	     "# HELP mtproxy_forwarded_responses_total Total responses forwarded back to clients.\n"
-	     "# TYPE mtproxy_forwarded_responses_total counter\n"
-	     "mtproxy_forwarded_responses_total %lld\n"
-	     "# HELP mtproxy_dropped_responses_total Responses that failed to forward.\n"
-	     "# TYPE mtproxy_dropped_responses_total counter\n"
-	     "mtproxy_dropped_responses_total %lld\n"
-	     "# HELP mtproxy_forwarded_acks_total Total simple ACKs forwarded.\n"
-	     "# TYPE mtproxy_forwarded_acks_total counter\n"
-	     "mtproxy_forwarded_acks_total %lld\n"
-	     "# HELP mtproxy_dropped_acks_total Simple ACKs that failed to forward.\n"
-	     "# TYPE mtproxy_dropped_acks_total counter\n"
-	     "mtproxy_dropped_acks_total %lld\n"
-	     "# HELP mtproxy_rpcs_created_total Total RPC connections created.\n"
-	     "# TYPE mtproxy_rpcs_created_total counter\n"
-	     "mtproxy_rpcs_created_total %lld\n"
-	     "# HELP mtproxy_rpc_dropped_answers_total RPC answers dropped.\n"
-	     "# TYPE mtproxy_rpc_dropped_answers_total counter\n"
-	     "mtproxy_rpc_dropped_answers_total %lld\n"
-	     "# HELP mtproxy_rpc_dropped_running_total RPC connections dropped while running.\n"
-	     "# TYPE mtproxy_rpc_dropped_running_total counter\n"
-	     "mtproxy_rpc_dropped_running_total %lld\n"
-	     "# HELP mtproxy_ext_connections_created_total Total external connections created.\n"
-	     "# TYPE mtproxy_ext_connections_created_total counter\n"
-	     "mtproxy_ext_connections_created_total %lld\n"
-	     "# HELP mtproxy_proxy_errors_total Internal proxy errors.\n"
-	     "# TYPE mtproxy_proxy_errors_total counter\n"
-	     "mtproxy_proxy_errors_total %lld\n"
-	     "# HELP mtproxy_connections_failed_lru_total Connections dropped by LRU eviction.\n"
-	     "# TYPE mtproxy_connections_failed_lru_total counter\n"
-	     "mtproxy_connections_failed_lru_total %lld\n"
-	     "# HELP mtproxy_connections_failed_flood_total Connections dropped due to flood detection.\n"
-	     "# TYPE mtproxy_connections_failed_flood_total counter\n"
-	     "mtproxy_connections_failed_flood_total %lld\n"
-	     "# HELP mtproxy_http_queries_total Total HTTP queries processed.\n"
-	     "# TYPE mtproxy_http_queries_total counter\n"
-	     "mtproxy_http_queries_total %lld\n"
-	     "# HELP mtproxy_http_bad_headers_total HTTP requests with malformed headers.\n"
-	     "# TYPE mtproxy_http_bad_headers_total counter\n"
-	     "mtproxy_http_bad_headers_total %lld\n"
-	     "# HELP mtproxy_ip_acl_rejected_total Connections rejected by IP ACL.\n"
-	     "# TYPE mtproxy_ip_acl_rejected_total counter\n"
-	     "mtproxy_ip_acl_rejected_total %lld\n"
-	     "# HELP mtproxy_direct_dc_connections_created_total Direct DC connections created.\n"
-	     "# TYPE mtproxy_direct_dc_connections_created_total counter\n"
-	     "mtproxy_direct_dc_connections_created_total %lld\n"
-	     "# HELP mtproxy_direct_dc_connections_failed_total Direct DC connections that failed to establish.\n"
-	     "# TYPE mtproxy_direct_dc_connections_failed_total counter\n"
-	     "mtproxy_direct_dc_connections_failed_total %lld\n"
-	     "# HELP mtproxy_direct_dc_connections_dc_closed_total Direct DC connections closed by the DC side.\n"
-	     "# TYPE mtproxy_direct_dc_connections_dc_closed_total counter\n"
-	     "mtproxy_direct_dc_connections_dc_closed_total %lld\n"
-	     "# HELP mtproxy_drs_delays_total Total inter-record delays injected.\n"
-	     "# TYPE mtproxy_drs_delays_total counter\n"
-	     "mtproxy_drs_delays_total %lld\n"
-	     "# HELP mtproxy_drs_delays_skipped_total Inter-record delays skipped during bulk transfers.\n"
-	     "# TYPE mtproxy_drs_delays_skipped_total counter\n"
-	     "mtproxy_drs_delays_skipped_total %lld\n"
-	     "# HELP mtproxy_drs_weibull_k Current Weibull shape parameter.\n"
-	     "# TYPE mtproxy_drs_weibull_k gauge\n"
-	     "mtproxy_drs_weibull_k %.6f\n"
-	     "# HELP mtproxy_drs_weibull_lambda Current Weibull scale parameter (ms).\n"
-	     "# TYPE mtproxy_drs_weibull_lambda gauge\n"
-	     "mtproxy_drs_weibull_lambda %.6f\n",
+	     "# HELP teleproxy_queries_total Total client queries received.\n"
+	     "# TYPE teleproxy_queries_total counter\n"
+	     "teleproxy_queries_total %lld\n"
+	     "# HELP teleproxy_forwarded_queries_total Total queries forwarded to Telegram DCs.\n"
+	     "# TYPE teleproxy_forwarded_queries_total counter\n"
+	     "teleproxy_forwarded_queries_total %lld\n"
+	     "# HELP teleproxy_expired_queries_total Queries that expired waiting for a response.\n"
+	     "# TYPE teleproxy_expired_queries_total counter\n"
+	     "teleproxy_expired_queries_total %lld\n"
+	     "# HELP teleproxy_dropped_queries_total Queries dropped with nowhere to forward.\n"
+	     "# TYPE teleproxy_dropped_queries_total counter\n"
+	     "teleproxy_dropped_queries_total %lld\n"
+	     "# HELP teleproxy_forwarded_responses_total Total responses forwarded back to clients.\n"
+	     "# TYPE teleproxy_forwarded_responses_total counter\n"
+	     "teleproxy_forwarded_responses_total %lld\n"
+	     "# HELP teleproxy_dropped_responses_total Responses that failed to forward.\n"
+	     "# TYPE teleproxy_dropped_responses_total counter\n"
+	     "teleproxy_dropped_responses_total %lld\n"
+	     "# HELP teleproxy_forwarded_acks_total Total simple ACKs forwarded.\n"
+	     "# TYPE teleproxy_forwarded_acks_total counter\n"
+	     "teleproxy_forwarded_acks_total %lld\n"
+	     "# HELP teleproxy_dropped_acks_total Simple ACKs that failed to forward.\n"
+	     "# TYPE teleproxy_dropped_acks_total counter\n"
+	     "teleproxy_dropped_acks_total %lld\n"
+	     "# HELP teleproxy_rpcs_created_total Total RPC connections created.\n"
+	     "# TYPE teleproxy_rpcs_created_total counter\n"
+	     "teleproxy_rpcs_created_total %lld\n"
+	     "# HELP teleproxy_rpc_dropped_answers_total RPC answers dropped.\n"
+	     "# TYPE teleproxy_rpc_dropped_answers_total counter\n"
+	     "teleproxy_rpc_dropped_answers_total %lld\n"
+	     "# HELP teleproxy_rpc_dropped_running_total RPC connections dropped while running.\n"
+	     "# TYPE teleproxy_rpc_dropped_running_total counter\n"
+	     "teleproxy_rpc_dropped_running_total %lld\n"
+	     "# HELP teleproxy_ext_connections_created_total Total external connections created.\n"
+	     "# TYPE teleproxy_ext_connections_created_total counter\n"
+	     "teleproxy_ext_connections_created_total %lld\n"
+	     "# HELP teleproxy_proxy_errors_total Internal proxy errors.\n"
+	     "# TYPE teleproxy_proxy_errors_total counter\n"
+	     "teleproxy_proxy_errors_total %lld\n"
+	     "# HELP teleproxy_connections_failed_lru_total Connections dropped by LRU eviction.\n"
+	     "# TYPE teleproxy_connections_failed_lru_total counter\n"
+	     "teleproxy_connections_failed_lru_total %lld\n"
+	     "# HELP teleproxy_connections_failed_flood_total Connections dropped due to flood detection.\n"
+	     "# TYPE teleproxy_connections_failed_flood_total counter\n"
+	     "teleproxy_connections_failed_flood_total %lld\n"
+	     "# HELP teleproxy_http_queries_total Total HTTP queries processed.\n"
+	     "# TYPE teleproxy_http_queries_total counter\n"
+	     "teleproxy_http_queries_total %lld\n"
+	     "# HELP teleproxy_http_bad_headers_total HTTP requests with malformed headers.\n"
+	     "# TYPE teleproxy_http_bad_headers_total counter\n"
+	     "teleproxy_http_bad_headers_total %lld\n"
+	     "# HELP teleproxy_ip_acl_rejected_total Connections rejected by IP ACL.\n"
+	     "# TYPE teleproxy_ip_acl_rejected_total counter\n"
+	     "teleproxy_ip_acl_rejected_total %lld\n"
+	     "# HELP teleproxy_direct_dc_connections_created_total Direct DC connections created.\n"
+	     "# TYPE teleproxy_direct_dc_connections_created_total counter\n"
+	     "teleproxy_direct_dc_connections_created_total %lld\n"
+	     "# HELP teleproxy_direct_dc_connections_failed_total Direct DC connections that failed to establish.\n"
+	     "# TYPE teleproxy_direct_dc_connections_failed_total counter\n"
+	     "teleproxy_direct_dc_connections_failed_total %lld\n"
+	     "# HELP teleproxy_direct_dc_connections_dc_closed_total Direct DC connections closed by the DC side.\n"
+	     "# TYPE teleproxy_direct_dc_connections_dc_closed_total counter\n"
+	     "teleproxy_direct_dc_connections_dc_closed_total %lld\n"
+	     "# HELP teleproxy_drs_delays_total Total inter-record delays injected.\n"
+	     "# TYPE teleproxy_drs_delays_total counter\n"
+	     "teleproxy_drs_delays_total %lld\n"
+	     "# HELP teleproxy_drs_delays_skipped_total Inter-record delays skipped during bulk transfers.\n"
+	     "# TYPE teleproxy_drs_delays_skipped_total counter\n"
+	     "teleproxy_drs_delays_skipped_total %lld\n"
+	     "# HELP teleproxy_drs_weibull_k Current Weibull shape parameter.\n"
+	     "# TYPE teleproxy_drs_weibull_k gauge\n"
+	     "teleproxy_drs_weibull_k %.6f\n"
+	     "# HELP teleproxy_drs_weibull_lambda Current Weibull scale parameter (ms).\n"
+	     "# TYPE teleproxy_drs_weibull_lambda gauge\n"
+	     "teleproxy_drs_weibull_lambda %.6f\n",
 	     S(get_queries),
 	     S(tot_forwarded_queries),
 	     S(expired_forwarded_queries),
@@ -920,45 +920,45 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
 
   /* gauges */
   sb_printf (sb,
-	     "# HELP mtproxy_uptime_seconds Time since proxy started in seconds.\n"
-	     "# TYPE mtproxy_uptime_seconds gauge\n"
-	     "mtproxy_uptime_seconds %d\n"
-	     "# HELP mtproxy_workers Number of worker processes.\n"
-	     "# TYPE mtproxy_workers gauge\n"
-	     "mtproxy_workers %d\n"
-	     "# HELP mtproxy_active_rpcs Currently active RPC connections.\n"
-	     "# TYPE mtproxy_active_rpcs gauge\n"
-	     "mtproxy_active_rpcs %lld\n"
-	     "# HELP mtproxy_ext_connections Current external client connections.\n"
-	     "# TYPE mtproxy_ext_connections gauge\n"
-	     "mtproxy_ext_connections %lld\n"
-	     "# HELP mtproxy_http_connections Current HTTP connections.\n"
-	     "# TYPE mtproxy_http_connections gauge\n"
-	     "mtproxy_http_connections %d\n"
-	     "# HELP mtproxy_pending_http_queries HTTP queries awaiting processing.\n"
-	     "# TYPE mtproxy_pending_http_queries gauge\n"
-	     "mtproxy_pending_http_queries %d\n"
-	     "# HELP mtproxy_active_connections Total active network connections.\n"
-	     "# TYPE mtproxy_active_connections gauge\n"
-	     "mtproxy_active_connections %d\n"
-	     "# HELP mtproxy_allocated_connections Total allocated connection slots.\n"
-	     "# TYPE mtproxy_allocated_connections gauge\n"
-	     "mtproxy_allocated_connections %d\n"
-	     "# HELP mtproxy_active_dh_connections Connections in DH key exchange.\n"
-	     "# TYPE mtproxy_active_dh_connections gauge\n"
-	     "mtproxy_active_dh_connections %d\n"
-	     "# HELP mtproxy_ready_targets Backend DC targets ready for connections.\n"
-	     "# TYPE mtproxy_ready_targets gauge\n"
-	     "mtproxy_ready_targets %d\n"
-	     "# HELP mtproxy_network_buffers_used_bytes Network buffer memory in use.\n"
-	     "# TYPE mtproxy_network_buffers_used_bytes gauge\n"
-	     "mtproxy_network_buffers_used_bytes %lld\n"
-	     "# HELP mtproxy_network_buffers_allocated_bytes Network buffer memory allocated.\n"
-	     "# TYPE mtproxy_network_buffers_allocated_bytes gauge\n"
-	     "mtproxy_network_buffers_allocated_bytes %lld\n"
-	     "# HELP mtproxy_direct_dc_connections_active Active direct DC connections.\n"
-	     "# TYPE mtproxy_direct_dc_connections_active gauge\n"
-	     "mtproxy_direct_dc_connections_active %lld\n",
+	     "# HELP teleproxy_uptime_seconds Time since proxy started in seconds.\n"
+	     "# TYPE teleproxy_uptime_seconds gauge\n"
+	     "teleproxy_uptime_seconds %d\n"
+	     "# HELP teleproxy_workers Number of worker processes.\n"
+	     "# TYPE teleproxy_workers gauge\n"
+	     "teleproxy_workers %d\n"
+	     "# HELP teleproxy_active_rpcs Currently active RPC connections.\n"
+	     "# TYPE teleproxy_active_rpcs gauge\n"
+	     "teleproxy_active_rpcs %lld\n"
+	     "# HELP teleproxy_ext_connections Current external client connections.\n"
+	     "# TYPE teleproxy_ext_connections gauge\n"
+	     "teleproxy_ext_connections %lld\n"
+	     "# HELP teleproxy_http_connections Current HTTP connections.\n"
+	     "# TYPE teleproxy_http_connections gauge\n"
+	     "teleproxy_http_connections %d\n"
+	     "# HELP teleproxy_pending_http_queries HTTP queries awaiting processing.\n"
+	     "# TYPE teleproxy_pending_http_queries gauge\n"
+	     "teleproxy_pending_http_queries %d\n"
+	     "# HELP teleproxy_active_connections Total active network connections.\n"
+	     "# TYPE teleproxy_active_connections gauge\n"
+	     "teleproxy_active_connections %d\n"
+	     "# HELP teleproxy_allocated_connections Total allocated connection slots.\n"
+	     "# TYPE teleproxy_allocated_connections gauge\n"
+	     "teleproxy_allocated_connections %d\n"
+	     "# HELP teleproxy_active_dh_connections Connections in DH key exchange.\n"
+	     "# TYPE teleproxy_active_dh_connections gauge\n"
+	     "teleproxy_active_dh_connections %d\n"
+	     "# HELP teleproxy_ready_targets Backend DC targets ready for connections.\n"
+	     "# TYPE teleproxy_ready_targets gauge\n"
+	     "teleproxy_ready_targets %d\n"
+	     "# HELP teleproxy_network_buffers_used_bytes Network buffer memory in use.\n"
+	     "# TYPE teleproxy_network_buffers_used_bytes gauge\n"
+	     "teleproxy_network_buffers_used_bytes %lld\n"
+	     "# HELP teleproxy_network_buffers_allocated_bytes Network buffer memory allocated.\n"
+	     "# TYPE teleproxy_network_buffers_allocated_bytes gauge\n"
+	     "teleproxy_network_buffers_allocated_bytes %lld\n"
+	     "# HELP teleproxy_direct_dc_connections_active Active direct DC connections.\n"
+	     "# TYPE teleproxy_direct_dc_connections_active gauge\n"
+	     "teleproxy_direct_dc_connections_active %lld\n",
 	     uptime,
 	     workers,
 	     S(active_rpcs),
@@ -978,31 +978,31 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
     if (_sc > 0) {
       int _i;
       sb_printf (sb,
-	       "# HELP mtproxy_secret_connections Current connections per configured secret.\n"
-	       "# TYPE mtproxy_secret_connections gauge\n");
+	       "# HELP teleproxy_secret_connections Current connections per configured secret.\n"
+	       "# TYPE teleproxy_secret_connections gauge\n");
       for (_i = 0; _i < _sc; _i++) {
-        sb_printf (sb, "mtproxy_secret_connections{secret=\"%s\"} %lld\n",
+        sb_printf (sb, "teleproxy_secret_connections{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections[_i]));
       }
       sb_printf (sb,
-	       "# HELP mtproxy_secret_connections_created_total Total connections per configured secret.\n"
-	       "# TYPE mtproxy_secret_connections_created_total counter\n");
+	       "# HELP teleproxy_secret_connections_created_total Total connections per configured secret.\n"
+	       "# TYPE teleproxy_secret_connections_created_total counter\n");
       for (_i = 0; _i < _sc; _i++) {
-        sb_printf (sb, "mtproxy_secret_connections_created_total{secret=\"%s\"} %lld\n",
+        sb_printf (sb, "teleproxy_secret_connections_created_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections_created[_i]));
       }
       sb_printf (sb,
-	       "# HELP mtproxy_secret_connection_limit Configured connection limit per secret (0=unlimited).\n"
-	       "# TYPE mtproxy_secret_connection_limit gauge\n");
+	       "# HELP teleproxy_secret_connection_limit Configured connection limit per secret (0=unlimited).\n"
+	       "# TYPE teleproxy_secret_connection_limit gauge\n");
       for (_i = 0; _i < _sc; _i++) {
-        sb_printf (sb, "mtproxy_secret_connection_limit{secret=\"%s\"} %d\n",
+        sb_printf (sb, "teleproxy_secret_connection_limit{secret=\"%s\"} %d\n",
 	         tcp_rpcs_get_ext_secret_label (_i), tcp_rpcs_get_ext_secret_limit (_i));
       }
       sb_printf (sb,
-	       "# HELP mtproxy_secret_connections_rejected_total Connections rejected due to per-secret limit.\n"
-	       "# TYPE mtproxy_secret_connections_rejected_total counter\n");
+	       "# HELP teleproxy_secret_connections_rejected_total Connections rejected due to per-secret limit.\n"
+	       "# TYPE teleproxy_secret_connections_rejected_total counter\n");
       for (_i = 0; _i < _sc; _i++) {
-        sb_printf (sb, "mtproxy_secret_connections_rejected_total{secret=\"%s\"} %lld\n",
+        sb_printf (sb, "teleproxy_secret_connections_rejected_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections_rejected[_i]));
       }
     }
@@ -2779,7 +2779,7 @@ server_functions_t mtproto_front_functions = {
   .parse_extra_args = mtfront_parse_extra_args,
   .epoll_timeout = 1000,
   .FullVersionStr = FullVersionStr,
-  .ShortVersionStr = "mtproxy",
+  .ShortVersionStr = "teleproxy",
   .parse_function = mtfront_parse_function,
   .flags = ENGINE_NO_PORT
   //.http_functions = &http_methods_stats

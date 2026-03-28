@@ -39,13 +39,13 @@ jobs:
 
       - name: Verify static linking
         run: |
-          file objs/bin/mtproto-proxy | tee /dev/stderr | grep -q "statically linked"
+          file objs/bin/teleproxy | tee /dev/stderr | grep -q "statically linked"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mtproto-proxy-linux-${{ matrix.arch }}
-          path: objs/bin/mtproto-proxy
+          name: teleproxy-linux-${{ matrix.arch }}
+          path: objs/bin/teleproxy
 
   release:
     needs: build
@@ -60,11 +60,11 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release
-          cp artifacts/mtproto-proxy-linux-amd64/mtproto-proxy release/mtproto-proxy-linux-amd64
-          cp artifacts/mtproto-proxy-linux-arm64/mtproto-proxy release/mtproto-proxy-linux-arm64
-          chmod +x release/mtproto-proxy-linux-*
+          cp artifacts/teleproxy-linux-amd64/teleproxy release/teleproxy-linux-amd64
+          cp artifacts/teleproxy-linux-arm64/teleproxy release/teleproxy-linux-arm64
+          chmod +x release/teleproxy-linux-*
           cd release
-          sha256sum mtproto-proxy-linux-* > SHA256SUMS
+          sha256sum teleproxy-linux-* > SHA256SUMS
 
       - name: Extract changelog
         run: |

@@ -1,18 +1,18 @@
 services:
-  mtproxy:
+  teleproxy:
     build:
       context: ..
       dockerfile: Dockerfile
       args:
         DEBUG_TOOLS: "1"
     environment:
-      - SECRET=${MTPROXY_SECRET}
+      - SECRET=${TELEPROXY_SECRET}
       - PORT=8443
       - STATS_PORT=8888
       - WORKERS=0
-      - IP_BLOCKLIST=/opt/mtproxy/blocklist.txt
+      - IP_BLOCKLIST=/opt/teleproxy/blocklist.txt
     volumes:
-      - ./ip-acl-blocklist.txt:/opt/mtproxy/blocklist.txt:ro
+      - ./ip-acl-blocklist.txt:/opt/teleproxy/blocklist.txt:ro
     networks:
       aclnet:
         ipv4_address: 172.31.0.2
@@ -27,8 +27,8 @@ services:
   blocked-tester:
     build: .
     environment:
-      - MTPROXY_HOST=172.31.0.2
-      - MTPROXY_PORT=8443
+      - TELEPROXY_HOST=172.31.0.2
+      - TELEPROXY_PORT=8443
     networks:
       aclnet:
         ipv4_address: 172.31.0.3
@@ -38,8 +38,8 @@ services:
   tester:
     build: .
     environment:
-      - MTPROXY_HOST=172.31.0.2
-      - MTPROXY_PORT=8443
+      - TELEPROXY_HOST=172.31.0.2
+      - TELEPROXY_PORT=8443
     networks:
       aclnet:
         ipv4_address: 172.31.0.4

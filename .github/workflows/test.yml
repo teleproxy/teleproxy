@@ -35,21 +35,21 @@ jobs:
 
     - name: Build and Run Tests
       env:
-        MTPROXY_SECRET: ${{ secrets.MTPROXY_SECRET }}
+        TELEPROXY_SECRET: ${{ secrets.TELEPROXY_SECRET }}
       run: |
-        if [ -z "$MTPROXY_SECRET" ]; then
-          export MTPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
-          echo "Generated random MTPROXY_SECRET for testing"
+        if [ -z "$TELEPROXY_SECRET" ]; then
+          export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
+          echo "Generated random TELEPROXY_SECRET for testing"
         fi
 
         make test
 
     - name: Run TLS E2E Tests
       env:
-        MTPROXY_SECRET: ${{ secrets.MTPROXY_SECRET }}
+        TELEPROXY_SECRET: ${{ secrets.TELEPROXY_SECRET }}
       run: |
-        if [ -z "$MTPROXY_SECRET" ]; then
-          export MTPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
+        if [ -z "$TELEPROXY_SECRET" ]; then
+          export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
         fi
         make test-tls
 
@@ -71,13 +71,13 @@ jobs:
 
     - name: Build and smoke test (ARM64)
       run: |
-        export MTPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
-        echo "Generated MTPROXY_SECRET for ARM64 testing"
+        export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
+        echo "Generated TELEPROXY_SECRET for ARM64 testing"
         make test
 
     - name: Run TLS E2E Tests (ARM64)
       run: |
-        export MTPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
+        export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
         make test-tls
 
   test-native-build:
@@ -95,7 +95,7 @@ jobs:
         source .venv/bin/activate
         pip install requests telethon
 
-    - name: Build MTProxy
+    - name: Build Teleproxy
       run: |
         make clean && make -j$(nproc)
 
@@ -103,9 +103,9 @@ jobs:
       run: |
         EXPECTED_VERSION=$(git describe --tags --match 'v*' --abbrev=0 | sed 's/^v//')
         echo "Expected version: $EXPECTED_VERSION"
-        ACTUAL_OUTPUT=$(objs/bin/mtproto-proxy 2>&1 || true)
-        echo "$ACTUAL_OUTPUT" | grep -q "mtproxy-${EXPECTED_VERSION}" || {
-          echo "ERROR: version mismatch — expected mtproxy-${EXPECTED_VERSION}"
+        ACTUAL_OUTPUT=$(objs/bin/teleproxy 2>&1 || true)
+        echo "$ACTUAL_OUTPUT" | grep -q "teleproxy-${EXPECTED_VERSION}" || {
+          echo "ERROR: version mismatch — expected teleproxy-${EXPECTED_VERSION}"
           exit 1
         }
         echo "Version check passed"
@@ -115,10 +115,10 @@ jobs:
         echo "Checking connectivity to Telegram DC (149.154.175.50:443)..."
         nc -zv 149.154.175.50 443 || echo "Failed to connect to Telegram DC 149.154.175.50:443"
 
-        mkdir -p mtproxy-run
-        cp objs/bin/mtproto-proxy mtproxy-run/
+        mkdir -p teleproxy-run
+        cp objs/bin/teleproxy teleproxy-run/
 
-        cd mtproxy-run
+        cd teleproxy-run
 
         # Download config/secret (ME relay mode)
         curl --connect-timeout 10 --max-time 30 --retry 3 -fsSL https://core.telegram.org/getProxySecret -o proxy-secret
@@ -128,25 +128,25 @@ jobs:
         echo "Using secret: $SECRET"
 
         # ME relay mode proxy
-        ./mtproto-proxy -u nobody -p 8888 -H 8443 -S $SECRET --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1 &
+        ./teleproxy -u nobody -p 8888 -H 8443 -S $SECRET --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1 &
 
-        echo "MTPROXY_SECRET=$SECRET" >> $GITHUB_ENV
+        echo "TELEPROXY_SECRET=$SECRET" >> $GITHUB_ENV
 
         sleep 5
 
     - name: Run Python Tests
       run: |
         source .venv/bin/activate
-        export MTPROXY_HOST=localhost
-        export MTPROXY_PORT=8443
+        export TELEPROXY_HOST=localhost
+        export TELEPROXY_PORT=8443
         python3 tests/test_proxy.py
 
     - name: Run TLS E2E Tests (ME Relay)
       run: |
         source .venv/bin/activate
 
-        cd mtproxy-run
-        ./mtproto-proxy -p 9888 -H 9443 -S $MTPROXY_SECRET \
+        cd teleproxy-run
+        ./teleproxy -p 9888 -H 9443 -S $TELEPROXY_SECRET \
           --http-stats --aes-pwd proxy-secret proxy-multi.conf -D ya.ru -M 0 &
         TLS_PID=$!
         cd ..
@@ -156,8 +156,8 @@ jobs:
           sleep 2
         done
 
-        MTPROXY_HOST=localhost MTPROXY_PORT=9443 MTPROXY_STATS_PORT=9888 \
-        MTPROXY_SECRET=$MTPROXY_SECRET TLS_BACKEND_HOST=ya.ru TLS_BACKEND_PORT=443 \
+        TELEPROXY_HOST=localhost TELEPROXY_PORT=9443 TELEPROXY_STATS_PORT=9888 \
+        TELEPROXY_SECRET=$TELEPROXY_SECRET TLS_BACKEND_HOST=ya.ru TLS_BACKEND_PORT=443 \
         python3 tests/test_tls_e2e.py
 
         kill $TLS_PID 2>/dev/null || true
@@ -179,7 +179,7 @@ jobs:
         source .venv/bin/activate
         pip install requests telethon TelethonFakeTLS
 
-    - name: Build MTProxy
+    - name: Build Teleproxy
       run: |
         make clean && make -j$(nproc)
 
@@ -188,21 +188,21 @@ jobs:
         echo "Checking connectivity to Telegram DC (149.154.167.51:443)..."
         nc -zv 149.154.167.51 443 || echo "WARNING: Cannot reach Telegram DC"
 
-        mkdir -p mtproxy-run
-        cp objs/bin/mtproto-proxy mtproxy-run/
-        cd mtproxy-run
+        mkdir -p teleproxy-run
+        cp objs/bin/teleproxy teleproxy-run/
+        cd teleproxy-run
 
         SECRET=$(head -c 16 /dev/urandom | xxd -ps)
         echo "Using secret: $SECRET"
-        echo "MTPROXY_SECRET=$SECRET" >> $GITHUB_ENV
+        echo "TELEPROXY_SECRET=$SECRET" >> $GITHUB_ENV
 
         # Obfuscated2 direct-mode proxy (no proxy-secret/proxy-multi.conf needed)
-        ./mtproto-proxy -u nobody -p 8888 -H 8443 -S $SECRET \
+        ./teleproxy -u nobody -p 8888 -H 8443 -S $SECRET \
           --http-stats --direct -M 0 2>obfs2.log &
         echo "Started obfs2 direct-mode proxy on port 8443"
 
         # Fake-TLS direct-mode proxy
-        ./mtproto-proxy -u nobody -p 9888 -H 9443 -S $SECRET \
+        ./teleproxy -u nobody -p 9888 -H 9443 -S $SECRET \
           --http-stats --direct -D ya.ru -M 0 2>faketls.log &
         echo "Started fake-TLS direct-mode proxy on port 9443"
 
@@ -227,7 +227,7 @@ jobs:
         DIRECT_HOST=localhost \
         DIRECT_OBFS2_PORT=8443 \
         DIRECT_TLS_PORT=9443 \
-        MTPROXY_SECRET=$MTPROXY_SECRET \
+        TELEPROXY_SECRET=$TELEPROXY_SECRET \
         EE_DOMAIN=ya.ru \
         python3 tests/test_direct_e2e.py
 
@@ -235,10 +235,10 @@ jobs:
       if: always()
       run: |
         echo "=== Obfs2 proxy log ==="
-        cat mtproxy-run/obfs2.log 2>/dev/null || echo "(no log)"
+        cat teleproxy-run/obfs2.log 2>/dev/null || echo "(no log)"
         echo ""
         echo "=== Fake-TLS proxy log ==="
-        cat mtproxy-run/faketls.log 2>/dev/null || echo "(no log)"
+        cat teleproxy-run/faketls.log 2>/dev/null || echo "(no log)"
 
   test-asan:
     runs-on: ubuntu-latest
@@ -260,19 +260,19 @@ jobs:
 
     - name: Setup and Run Proxy
       run: |
-        mkdir -p mtproxy-run
-        cp objs/bin/mtproto-proxy mtproxy-run/
-        cd mtproxy-run
+        mkdir -p teleproxy-run
+        cp objs/bin/teleproxy teleproxy-run/
+        cd teleproxy-run
 
         curl --connect-timeout 10 --max-time 30 --retry 3 -fsSL https://core.telegram.org/getProxySecret -o proxy-secret
         curl --connect-timeout 10 --max-time 30 --retry 3 -fsSL https://core.telegram.org/getProxyConfig -o proxy-multi.conf
 
         SECRET=$(head -c 16 /dev/urandom | xxd -ps)
         echo "Using secret: $SECRET"
-        echo "MTPROXY_SECRET=$SECRET" >> $GITHUB_ENV
+        echo "TELEPROXY_SECRET=$SECRET" >> $GITHUB_ENV
 
         ASAN_OPTIONS=detect_leaks=0 \
-        ./mtproto-proxy -u nobody -p 8888 -H 8443 -S $SECRET \
+        ./teleproxy -u nobody -p 8888 -H 8443 -S $SECRET \
           --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 1 \
           2>asan.log &
         echo $! > proxy.pid
@@ -284,12 +284,12 @@ jobs:
         python3 -m venv .venv
         source .venv/bin/activate
         pip install requests
-        MTPROXY_HOST=localhost MTPROXY_PORT=8443 python3 tests/test_proxy.py
+        TELEPROXY_HOST=localhost TELEPROXY_PORT=8443 python3 tests/test_proxy.py
 
     - name: Check for ASan Errors
       if: always()
       run: |
-        PID=$(cat mtproxy-run/proxy.pid 2>/dev/null || true)
+        PID=$(cat teleproxy-run/proxy.pid 2>/dev/null || true)
         if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
           echo "Proxy still running (PID $PID) — no ASan crash during test"
           kill "$PID" 2>/dev/null; wait "$PID" 2>/dev/null || true
@@ -297,9 +297,9 @@ jobs:
           echo "WARNING: Proxy exited early — possible ASan error"
         fi
 
-        if [ -f mtproxy-run/asan.log ] && grep -q "AddressSanitizer" mtproxy-run/asan.log; then
+        if [ -f teleproxy-run/asan.log ] && grep -q "AddressSanitizer" teleproxy-run/asan.log; then
           echo "::error::AddressSanitizer errors detected"
-          cat mtproxy-run/asan.log
+          cat teleproxy-run/asan.log
           exit 1
         fi
         echo "No ASan errors detected"
@@ -320,11 +320,11 @@ jobs:
         make -j$(nproc) \
           EXTRA_CFLAGS="-fsanitize=address -fno-omit-frame-pointer" \
           EXTRA_LDFLAGS="-fsanitize=address"
-        cp objs/bin/mtproto-proxy mtproxy-run/
+        cp objs/bin/teleproxy teleproxy-run/
 
-        cd mtproxy-run
+        cd teleproxy-run
         ASAN_OPTIONS=detect_leaks=0 \
-        ./mtproto-proxy -u nobody -p 7888 -H 7443 -S $MTPROXY_SECRET \
+        ./teleproxy -u nobody -p 7888 -H 7443 -S $TELEPROXY_SECRET \
           --http-stats --aes-pwd proxy-secret proxy-multi.conf -M 0 \
           >asan-bug.log 2>&1 &
         BUG_PID=$!

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Live connectivity test for an MTProxy instance.
+"""Live connectivity test for a Teleproxy instance.
 
-Tests a running MTProxy by performing an obfuscated2 handshake via Telethon.
+Tests a running Teleproxy by performing an obfuscated2 handshake via Telethon.
 Designed for quick iteration against a production or staging proxy.
 
 Usage:
@@ -173,7 +173,7 @@ def test_telethon_multiple_dcs(host: str, port: int, secret_hex: str,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Live MTProxy connectivity test")
+    parser = argparse.ArgumentParser(description="Live Teleproxy connectivity test")
     parser.add_argument("--host", default="localhost",
                         help="Proxy hostname")
     parser.add_argument("--port", type=int, default=8444,
@@ -184,7 +184,7 @@ def main():
                         help="Skip multi-DC test")
     args = parser.parse_args()
 
-    print(f"Testing MTProxy at {args.host}:{args.port}")
+    print(f"Testing Teleproxy at {args.host}:{args.port}")
     print(f"Secret: {args.secret}")
     print()
 

@@ -11,14 +11,14 @@ services:
       retries: 15
       start_period: 3s
 
-  mtproxy:
+  teleproxy:
     build:
       context: ..
       dockerfile: Dockerfile
       args:
         DEBUG_TOOLS: "1"
     environment:
-      - SECRET=${MTPROXY_SECRET:-d41d8cd98f00b204e9800998ecf8427e}
+      - SECRET=${TELEPROXY_SECRET:-d41d8cd98f00b204e9800998ecf8427e}
       - PORT=8443
       - STATS_PORT=8888
       # Use IP directly — gethostbyname() can't resolve Docker service names
@@ -34,18 +34,18 @@ services:
   tester:
     build: .
     environment:
-      - MTPROXY_HOST=mtproxy
-      - MTPROXY_PORT=8443
-      - MTPROXY_STATS_PORT=8888
-      - MTPROXY_SECRET=${MTPROXY_SECRET:-d41d8cd98f00b204e9800998ecf8427e}
+      - TELEPROXY_HOST=teleproxy
+      - TELEPROXY_PORT=8443
+      - TELEPROXY_STATS_PORT=8888
+      - TELEPROXY_SECRET=${TELEPROXY_SECRET:-d41d8cd98f00b204e9800998ecf8427e}
       - TLS_BACKEND_HOST=tls-backend
       - TLS_BACKEND_PORT=443
-      # Must match EE_DOMAIN in mtproxy service (used for ee secret in Telethon test)
+      # Must match EE_DOMAIN in teleproxy service (used for ee secret in Telethon test)
       - EE_DOMAIN=172.30.0.10
     networks:
       - tlsnet
     depends_on:
-      - mtproxy
+      - teleproxy
     command: ["python", "test_tls_e2e.py"]
 
 networks:

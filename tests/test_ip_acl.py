@@ -12,8 +12,8 @@ import os
 def test_blocked_connection():
     """Test that TCP connections from a blocked IP are rejected on the proxy port."""
     print("Testing blocked connection on proxy port...")
-    host = os.environ.get("MTPROXY_HOST", "172.31.0.2")
-    port = int(os.environ.get("MTPROXY_PORT", 8443))
+    host = os.environ.get("TELEPROXY_HOST", "172.31.0.2")
+    port = int(os.environ.get("TELEPROXY_PORT", 8443))
 
     rejected = 0
     attempts = 5
@@ -59,8 +59,8 @@ def test_blocked_connection():
 def test_allowed_connection():
     """Test that a non-blocked IP can connect to the proxy port."""
     print("Testing non-blocked connection on proxy port...")
-    host = os.environ.get("MTPROXY_HOST", "172.31.0.2")
-    port = int(os.environ.get("MTPROXY_PORT", 8443))
+    host = os.environ.get("TELEPROXY_HOST", "172.31.0.2")
+    port = int(os.environ.get("TELEPROXY_PORT", 8443))
 
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
