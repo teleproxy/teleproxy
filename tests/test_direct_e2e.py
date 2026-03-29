@@ -40,13 +40,12 @@ import time
 API_ID = 2834
 API_HASH = "68875f756c9b437a8b916ca3de215815"
 
-# Pre-saved test files in Saved Messages of a user test account.
-# Seeded by tests/seed_test_media.py — do not delete from Saved Messages.
-# Skipped automatically when using a bot token (bots have no Saved Messages).
+# Pre-saved test files in the test channel (bot must be admin).
+# Seeded by tests/seed_test_media.py — do not delete from the channel.
+TEST_CHANNEL_ID = -1003687592445
 TEST_FILES = {
-    "1mb": {"msg_id": 116459, "size": 1048576, "sha256": "2c331300901dc5a4a58fcce075212f9506da9cdb281203067760b0c2715eab59"},
-    "20mb": {"msg_id": 116462, "size": 20971520, "sha256": "30ff0930d860a323c4e9e1f31a6758a7d208f0c53e57c4ea4361b8397e277816"},
-    "100mb": {"msg_id": 116467, "size": 104857600, "sha256": "ca81cb2e62c70e488b74a347caea415989bfdaf64d47aa80e898d01974fb2ed0"},
+    "1mb": {"msg_id": 4, "size": 1048576, "sha256": "383f48e141893fb74730cf11acc50081e17f5fe30fd4f62dcde7ad1ae9be6a8f"},
+    "20mb": {"msg_id": 5, "size": 20971520, "sha256": "536f79417e366fcca2b19b28306210b2992d49ca9c27f131d03c520aeccb1dad"},
 }
 
 # Per-file download timeouts (seconds).
@@ -113,7 +112,7 @@ async def _download_test_files(client, transport_label):
 
         try:
             msg = await asyncio.wait_for(
-                client.get_messages("me", ids=info["msg_id"]),
+                client.get_messages(TEST_CHANNEL_ID, ids=info["msg_id"]),
                 timeout=15,
             )
         except Exception as e:
