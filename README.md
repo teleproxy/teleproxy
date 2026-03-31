@@ -1,7 +1,7 @@
 # Teleproxy
 
 [![CI](https://github.com/teleproxy/teleproxy/actions/workflows/test.yml/badge.svg)](https://github.com/teleproxy/teleproxy/actions/workflows/test.yml)
-[![Docker](https://ghcr-badge.egpl.dev/teleproxy/teleproxy/size)](https://github.com/teleproxy/teleproxy/pkgs/container/teleproxy)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/teleproxy/teleproxy/pkgs/container/teleproxy)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-blue.svg)](LICENSE)
 
 High-performance MTProto proxy for Telegram with DPI resistance, fake-TLS camouflage, and production-grade monitoring.
