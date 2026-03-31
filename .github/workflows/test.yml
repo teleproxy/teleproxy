@@ -75,6 +75,23 @@ jobs:
     - name: Run DRS Delays Tests
       run: make test-drs-delays
 
+    - name: Run CDN DC Tests
+      run: make test-cdn-dc
+
+    - name: Run IPv6 Direct Mode Tests
+      run: make test-ipv6-direct
+
+  test-dc-lookup:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libssl-dev zlib1g-dev
+    - name: Build and run DC lookup tests
+      run: make test-dc-lookup
+
   test-arm64:
     runs-on: ubuntu-24.04-arm
     steps:

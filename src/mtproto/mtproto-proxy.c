@@ -2430,7 +2430,7 @@ static int secret_count;
 // int outbound_connections_per_second = DEFAULT_OUTBOUND_CONNECTION_CREATION_RATE;
 
 void mtfront_pre_loop (void) {
-  int i, enable_ipv6 = engine_check_ipv6_enabled () ? SM_IPV6 : 0;
+  int i, enable_ipv6 = ipv6_enabled ? SM_IPV6 : 0;
   if (domain_count == 0) {
     tcp_maximize_buffers = 1;
     if (window_clamp == 0) {

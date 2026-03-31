@@ -1291,12 +1291,13 @@ int net_accept_new_connections (listening_connection_job_t LCJ) /* {{{ */ {
       }
     }
 
-    if (LC->flags & C_IPV6) {
-      assert (peer_addrlen == sizeof (struct sockaddr_in6));
-      assert (peer.a6.sin6_family == AF_INET6);
-    } else {
+    if (peer.a4.sin_family == AF_INET) {
       assert (peer_addrlen == sizeof (struct sockaddr_in));
-      assert (peer.a4.sin_family == AF_INET);
+    } else if (peer.a6.sin6_family == AF_INET6) {
+      assert (peer_addrlen == sizeof (struct sockaddr_in6));
+    } else {
+      close (cfd);
+      continue;
     }
    
     connection_job_t C;

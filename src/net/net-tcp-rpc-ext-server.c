@@ -541,7 +541,8 @@ static void direct_retry_dc_connection (connection_job_t C) {
 
   job_t EJ = direct_try_dc_addrs (C, dc, target_dc);
   if (EJ) {
-    TCP_RPC_DATA(EJ)->extra_int4 = target_dc;
+    int outbound_dc = (target_dc < 0 ? -1 : 1) * dc->dc_id;
+    TCP_RPC_DATA(EJ)->extra_int4 = outbound_dc;
     TCP_RPC_DATA(EJ)->extra_int3 = TCP_RPC_DATA(C)->extra_int3;
     c->extra = job_incref (EJ);
     CONN_INFO(EJ)->extra = job_incref (C);
@@ -599,8 +600,11 @@ static int direct_connect_to_dc (connection_job_t C, int target_dc) {
     return direct_schedule_retry (C, target_dc, 0);
   }
 
-  /* Store target DC and client transport tag for the connected callback */
-  TCP_RPC_DATA(EJ)->extra_int4 = target_dc;
+  /* Store resolved DC for the outbound init header.
+     Preserve the media flag (negative sign) from the original target.
+     CDN/test offsets are already stripped by direct_dc_lookup(). */
+  int outbound_dc = (target_dc < 0 ? -1 : 1) * dc->dc_id;
+  TCP_RPC_DATA(EJ)->extra_int4 = outbound_dc;
   TCP_RPC_DATA(EJ)->extra_int3 = TCP_RPC_DATA(C)->extra_int3;  /* client transport tag */
 
   c->extra = job_incref (EJ);

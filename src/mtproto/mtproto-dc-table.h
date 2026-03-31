@@ -37,7 +37,9 @@ struct dc_entry {
 };
 
 /* Look up a Telegram DC by its identifier.
-   Handles negative dc_id (media DCs) and dc_id >= 10000 (test DCs).
+   Handles negative dc_id (media DCs), dc_id >= 10000 (test DCs),
+   and dc_id 201-299 (CDN DCs, mapped to the base production DC).
+   Override table (--dc-override) is checked first.
    Returns NULL if the DC is unknown. */
 const struct dc_entry *direct_dc_lookup (int dc_id);
 

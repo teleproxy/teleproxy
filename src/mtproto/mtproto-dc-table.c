@@ -113,11 +113,19 @@ const struct dc_entry *direct_dc_lookup (int dc_id) {
     is_test = 1;
   }
 
-  /* Check override table first */
+  /* Check override table before CDN stripping.
+     This allows --dc-override 203:cdn-ip:443 to route CDN DCs
+     to actual CDN IPs instead of falling back to the origin DC. */
   for (int i = 0; i < override_count; i++) {
     if (override_table[i].dc_id == dc_id) {
       return &override_table[i];
     }
+  }
+
+  /* CDN DCs use 200 + base_dc_id.  Fall back to the origin DC
+     when no --dc-override is configured for the CDN DC. */
+  if (dc_id > 200 && dc_id < 300) {
+    dc_id -= 200;
   }
 
   if (is_test) {

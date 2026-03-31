@@ -59,7 +59,7 @@ DEPDIRS := ${DEP} $(addprefix ${DEP}/,${PROJECTS})
 ALLDIRS := ${DEPDIRS} ${OBJDIRS}
 
 
-.PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-ip-acl test-drs-delays docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
+.PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-ip-acl test-drs-delays test-cdn-dc test-ipv6-direct test-dc-lookup docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
 
 EXELIST	:= ${EXE}/teleproxy
 
@@ -238,6 +238,27 @@ test-drs-delays:
 		docker compose -f tests/docker-compose.drs-delays-test.yml logs teleproxy; \
 		docker compose -f tests/docker-compose.drs-delays-test.yml down; exit 1)
 	docker compose -f tests/docker-compose.drs-delays-test.yml down
+
+test-cdn-dc:
+	@export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
+	timeout 300s docker compose -f tests/docker-compose.cdn-dc-test.yml up --build --exit-code-from tester || \
+		(echo "CDN DC test timed out or failed"; \
+		docker compose -f tests/docker-compose.cdn-dc-test.yml logs teleproxy; \
+		docker compose -f tests/docker-compose.cdn-dc-test.yml down; exit 1)
+	docker compose -f tests/docker-compose.cdn-dc-test.yml down
+
+test-ipv6-direct:
+	@export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
+	timeout 300s docker compose -f tests/docker-compose.ipv6-direct-test.yml up --build --exit-code-from tester || \
+		(echo "IPv6 direct test timed out or failed"; \
+		docker compose -f tests/docker-compose.ipv6-direct-test.yml logs teleproxy; \
+		docker compose -f tests/docker-compose.ipv6-direct-test.yml down; exit 1)
+	docker compose -f tests/docker-compose.ipv6-direct-test.yml down
+
+test-dc-lookup:
+	$(MAKE) -C fuzz test
 
 FUZZ_DURATION ?= 60
 
