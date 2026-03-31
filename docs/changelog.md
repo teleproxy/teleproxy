@@ -1,5 +1,10 @@
 # Changelog
 
+## 4.2.1
+
+- Fix aarch64 build: remove unused x86-only `sys/io.h` include
+- Add native ARM64 glibc build to CI (catches platform-specific issues masked by Alpine/musl)
+
 ## 4.2.0
 
 - `--stats-allow-net CIDR` flag to extend stats endpoint access beyond RFC1918 ranges (repeatable). Docker: `STATS_ALLOW_NET=100.64.0.0/10,fd00::/8`
