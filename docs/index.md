@@ -13,6 +13,8 @@ A high-performance MTProto proxy that makes Telegram traffic indistinguishable f
 [Get Started](getting-started/quickstart.md){ .md-button .md-button--primary }
 [Docker Quick Start](docker/index.md){ .md-button }
 
+:material-send: Follow **[@teleproxy_dev](https://t.me/teleproxy_dev)** on Telegram for updates.
+
 </div>
 
 <div class="feature-grid" markdown>

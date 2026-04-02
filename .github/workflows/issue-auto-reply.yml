@@ -21,5 +21,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `Thanks for opening an issue! A maintainer will review it soon.\n\nIssues without community interest may be closed after 60 days of inactivity.`
+              body: `Thanks for opening an issue! A maintainer will review it soon.\n\nFor project updates, join [@teleproxy_dev](https://t.me/teleproxy_dev) on Telegram.\n\nIssues without community interest may be closed after 60 days of inactivity.`
             });

@@ -13,6 +13,8 @@ Proxy MTProto hiệu suất cao giúp lưu lượng Telegram không thể phân 
 [Bắt đầu](getting-started/quickstart.md){ .md-button .md-button--primary }
 [Khởi chạy với Docker](docker/index.md){ .md-button }
 
+:material-send: Theo dõi **[@teleproxy_dev](https://t.me/teleproxy_dev)** trên Telegram để nhận cập nhật.
+
 </div>
 
 <div class="feature-grid" markdown>

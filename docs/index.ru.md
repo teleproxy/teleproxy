@@ -13,6 +13,8 @@ hide:
 [Начать](getting-started/quickstart.md){ .md-button .md-button--primary }
 [Запуск в Docker](docker/index.md){ .md-button }
 
+:material-send: Следите за обновлениями в **[@teleproxy_dev](https://t.me/teleproxy_dev)**.
+
 </div>
 
 <div class="feature-grid" markdown>

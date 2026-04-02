@@ -17,6 +17,8 @@ hide:
 [شروع کنید](getting-started/quickstart.md){ .md-button .md-button--primary }
 [راه‌اندازی با Docker](docker/index.md){ .md-button }
 
+:material-send: **[@teleproxy_dev](https://t.me/teleproxy_dev)** را در تلگرام دنبال کنید.
+
 </div>
 
 <div dir="rtl" markdown>
