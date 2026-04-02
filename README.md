@@ -11,7 +11,7 @@ High-performance MTProto proxy for Telegram with DPI resistance, fake-TLS camouf
 <details>
 <summary>🎵 Ghost Protocol — the unofficial anthem</summary>
 <br>
-<video src="https://github.com/user-attachments/assets/b96b7646-20de-427e-bad0-cb1cbc7e9379" controls width="480"></video>
+<video src="https://github.com/user-attachments/assets/305531d3-48d1-46d3-b463-84fa6872dbfd" controls width="480"></video>
 </details>
 
 ## Highlights
