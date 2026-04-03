@@ -25,6 +25,16 @@ High-performance MTProto proxy for Telegram with DPI resistance, fake-TLS camouf
 <video src="https://github.com/user-attachments/assets/37919bc8-2bbb-4bea-8af6-2e15d3bc7c65" controls width="640"></video>
 </details>
 
+## Deploy (beta)
+
+Get a proxy running in under 2 minutes:
+
+[![Deploy](https://img.shields.io/badge/deploy-one--click-00C853?style=for-the-badge&logoColor=white)](https://teleproxy.github.io/deploy/)
+
+The deploy page generates a unique secret, gives you a script to paste when creating a VPS, then shows your connection QR code. No terminal needed.
+
+Supports: DigitalOcean · Vultr · Hetzner · Linode · any Ubuntu/Debian VPS
+
 ## Highlights
 
 - **Fake-TLS camouflage** — traffic indistinguishable from normal HTTPS (TLS 1.3)

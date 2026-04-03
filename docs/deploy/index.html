@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploy Teleproxy</title>
+<meta name="description" content="Deploy a Telegram proxy in under 2 minutes. No terminal needed.">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & base ──────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0c1520;
+  --bg-card: #111d2b;
+  --bg-card-hover: #152536;
+  --border: rgba(108, 180, 217, 0.12);
+  --border-active: rgba(108, 180, 217, 0.35);
+  --text: #c8d6e0;
+  --text-muted: #6a8298;
+  --text-bright: #e8f0f5;
+  --accent: #6cb4d9;
+  --accent-dim: rgba(108, 180, 217, 0.15);
+  --green: #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.12);
+  --code-bg: #0a1018;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius: 10px;
+  --step-gap: 2rem;
+}
+
+html { font-size: 15px; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ── Ambient background ────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(26, 58, 74, 0.5) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(42, 101, 133, 0.3) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Layout ────────────────────────────────────────────── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.header-logo {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  opacity: 0.9;
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-bright);
+  margin-bottom: 0.4rem;
+}
+
+.header p {
+  color: var(--text-muted);
+  font-size: 0.93rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.header a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.header a:hover { text-decoration: underline; }
+
+/* ── Step indicator ────────────────────────────────────── */
+.steps-nav {
+  display: flex;
+  gap: 0;
+  margin-bottom: var(--step-gap);
+  position: relative;
+}
+
+.steps-nav::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border);
+}
+
+.step-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: none;
+  background: none;
+  cursor: default;
+  position: relative;
+  transition: color 0.3s;
+  font-family: var(--sans);
+}
+
+.step-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background 0.3s;
+  z-index: 1;
+}
+
+.step-tab.active { color: var(--accent); }
+.step-tab.active::after { background: var(--accent); }
+.step-tab.done { color: var(--green); }
+.step-tab.done::after { background: var(--green); }
+
+.step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.step-tab.done .step-num {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--bg);
+}
+
+.step-tab.active .step-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+/* ── Step panels ───────────────────────────────────────── */
+.step-panel {
+  display: none;
+  animation: fadeSlideIn 0.35s ease;
+}
+
+.step-panel.active { display: block; }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Cards ─────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.8rem;
+}
+
+/* ── Code block ────────────────────────────────────────── */
+.code-wrap {
+  position: relative;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.code-wrap pre {
+  margin: 0;
+  padding: 1rem 1.2rem;
+  padding-right: 4rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre;
+  tab-size: 2;
+}
+
+.code-wrap .copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.72rem;
+  font-family: var(--sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.code-wrap .copy-btn:hover {
+  border-color: var(--border-active);
+  color: var(--text-bright);
+}
+
+.code-wrap .copy-btn.copied {
+  color: var(--green);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+/* ── Providers ─────────────────────────────────────────── */
+.providers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.provider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-family: var(--sans);
+}
+
+.provider:hover {
+  border-color: var(--border-active);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.provider-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.provider small {
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: auto;
+  font-size: 0.72rem;
+}
+
+/* ── Instructions ──────────────────────────────────────── */
+.instructions {
+  margin-top: 1.2rem;
+}
+
+.instructions ol {
+  padding-left: 1.3rem;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.instructions ol li {
+  margin-bottom: 0.5rem;
+  line-height: 1.55;
+}
+
+.instructions ol li::marker {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.instructions strong {
+  color: var(--text-bright);
+}
+
+.hint {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--accent-dim);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  line-height: 1.5;
+}
+
+.hint-green {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+/* ── IP input ──────────────────────────────────────────── */
+.ip-form {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.ip-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: var(--code-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ip-input::placeholder { color: var(--text-muted); }
+.ip-input:focus { border-color: var(--accent); }
+
+.ip-input.error { border-color: #f87171; }
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.btn-secondary:hover {
+  background: rgba(108, 180, 217, 0.22);
+}
+
+/* ── Result ────────────────────────────────────────────── */
+.result {
+  display: none;
+  animation: fadeSlideIn 0.4s ease;
+}
+
+.result.visible { display: block; }
+
+.result-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.result-card h3 {
+  color: var(--green);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.qr-container {
+  display: inline-block;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.qr-container canvas {
+  display: block;
+}
+
+.result-link {
+  margin-top: 1rem;
+}
+
+.result-link a {
+  display: inline-block;
+  padding: 0.65rem 1.5rem;
+  background: var(--green);
+  color: var(--bg);
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.result-link a:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+.result-url {
+  margin-top: 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  word-break: break-all;
+  line-height: 1.5;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.result-url:hover { background: var(--accent-dim); }
+
+/* ── Options toggle ────────────────────────────────────── */
+.options-toggle {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.options-toggle button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  transition: color 0.2s;
+}
+
+.options-toggle button:hover { color: var(--text); }
+
+.options-panel {
+  display: none;
+  margin-top: 1rem;
+  animation: fadeSlideIn 0.25s ease;
+}
+
+.options-panel.open { display: block; }
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.opt-row label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 90px;
+  font-weight: 500;
+}
+
+.opt-row input, .opt-row select {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.opt-row input:focus, .opt-row select:focus { border-color: var(--accent); }
+
+/* ── Footer ────────────────────────────────────────────── */
+.footer {
+  margin-top: 3rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.footer a:hover { text-decoration: underline; }
+
+/* ── Step action bar ───────────────────────────────────── */
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 540px) {
+  html { font-size: 14px; }
+  .page { padding: 1.5rem 1rem 3rem; }
+  .providers { grid-template-columns: 1fr; }
+  .ip-form { flex-direction: column; }
+  .step-tab span:not(.step-num) { display: none; }
+  .step-tab { justify-content: center; }
+  .header h1 { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <svg class="header-logo" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="m" x1="334" y1="220" x2="650" y2="782" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#FFFFFF"/><stop offset=".22" stop-color="#D8F7F4"/>
+          <stop offset=".58" stop-color="#7EDCF9"/><stop offset="1" stop-color="#6A8BFF"/>
+        </linearGradient>
+      </defs>
+      <rect x="276" y="220" width="472" height="132" rx="66" fill="url(#m)"/>
+      <rect x="430" y="304" width="160" height="484" rx="80" fill="url(#m)"/>
+    </svg>
+    <h1>Deploy Teleproxy</h1>
+    <p>Your own Telegram proxy in under 2 minutes. Everything stays in this browser tab.</p>
+    <p style="margin-top: 0.5rem;"><span style="font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(108,180,217,0.15); color: var(--accent);">Beta</span></p>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="steps-nav">
+    <div class="step-tab active" data-step="1">
+      <span class="step-num">1</span>
+      <span>Configure</span>
+    </div>
+    <div class="step-tab" data-step="2">
+      <span class="step-num">2</span>
+      <span>Deploy</span>
+    </div>
+    <div class="step-tab" data-step="3">
+      <span class="step-num">3</span>
+      <span>Connect</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Configure -->
+  <div class="step-panel active" id="step-1">
+    <div class="card">
+      <div class="card-label">Your install script</div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+        A unique secret and camouflage domain have been generated for you.
+        Copy this script &mdash; you&rsquo;ll paste it in the next step.
+      </p>
+      <div class="code-wrap">
+        <pre id="script-output"></pre>
+        <button class="copy-btn" onclick="copyScript()" id="copy-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+
+      <div class="options-toggle">
+        <button onclick="toggleOptions()">Advanced options &#9662;</button>
+      </div>
+
+      <div class="options-panel" id="options-panel">
+        <div class="opt-row">
+          <label>Port</label>
+          <input type="number" id="opt-port" value="443" min="1" max="65535" onchange="regenerateScript()">
+        </div>
+        <div class="opt-row">
+          <label>Domain</label>
+          <input type="text" id="opt-domain" onchange="regenerateScript()" placeholder="auto-selected">
+        </div>
+        <div class="opt-row">
+          <label>Secret</label>
+          <input type="text" id="opt-secret" maxlength="32" onchange="regenerateScript()" placeholder="auto-generated" style="font-size: 0.72rem;">
+        </div>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn" onclick="goStep(2)">I copied the script &rarr;</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Deploy -->
+  <div class="step-panel" id="step-2">
+    <div class="card">
+      <div class="card-label">Create a server</div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Pick any provider. The cheapest plan with Ubuntu 24.04 is all you need.
+      </p>
+
+      <div class="providers">
+        <a class="provider" href="https://www.digitalocean.com/" target="_blank" rel="noopener">
+          <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 4.55 3.08 8.38 7.27 9.51v-3.76h-2.2v-2.4h2.2v-1.83c0-2.17 1.29-3.37 3.27-3.37.95 0 1.94.17 1.94.17v2.13h-1.09c-1.08 0-1.41.67-1.41 1.35v1.55h2.4l-.38 2.4h-2.02v3.76c4.19-1.13 7.27-4.96 7.27-9.51C21.95 6.45 17.5 2 12.04 2z"/></svg>
+          DigitalOcean
+          <small>$4/mo</small>
+        </a>
+        <a class="provider" href="https://www.vultr.com/" target="_blank" rel="noopener">
+          <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M2 5l10 14L22 5H2zm3.5 1.5h13L12 16.5 5.5 6.5z"/></svg>
+          Vultr
+          <small>$2.50/mo</small>
+        </a>
+        <a class="provider" href="https://www.hetzner.com/" target="_blank" rel="noopener">
+          <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h3v16H4V4zm13 0h3v16h-3V4zM7 11h10v2H7v-2z"/></svg>
+          Hetzner
+          <small>$3.29/mo</small>
+        </a>
+        <a class="provider" href="https://www.linode.com/" target="_blank" rel="noopener">
+          <svg class="provider-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+          Linode
+          <small>$5/mo</small>
+        </a>
+      </div>
+
+      <div class="instructions">
+        <ol>
+          <li>Click a provider above and create an account (or log in).</li>
+          <li>Create a new server: select <strong>Ubuntu 24.04</strong> and the cheapest plan.</li>
+          <li>Find the <strong>&ldquo;User Data&rdquo;</strong> or <strong>&ldquo;Cloud-Init&rdquo;</strong> field and paste the script you copied.</li>
+          <li>Create the server. Wait ~2 minutes for it to boot.</li>
+        </ol>
+      </div>
+
+      <div class="hint">
+        The script works on any VPS provider with Ubuntu 22.04+ or Debian 12 &mdash; not just the four listed above.
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn btn-secondary" onclick="goStep(1)">&larr; Back</button>
+      <button class="btn" onclick="goStep(3)">Server is ready &rarr;</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Connect -->
+  <div class="step-panel" id="step-3">
+    <div class="card">
+      <div class="card-label">Enter your server&rsquo;s IP</div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">
+        Copy the IP address from your provider&rsquo;s dashboard.
+      </p>
+      <div class="ip-form">
+        <input type="text" class="ip-input" id="ip-input" placeholder="e.g. 203.0.113.42" autocomplete="off" spellcheck="false">
+        <button class="btn" onclick="generateLink()" id="generate-btn">Generate link</button>
+      </div>
+    </div>
+
+    <div class="result" id="result">
+      <div class="result-card">
+        <h3>Your proxy is ready</h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Scan this QR code with your phone, or tap the button below.
+        </p>
+
+        <div class="qr-container">
+          <canvas id="qr-canvas"></canvas>
+        </div>
+
+        <div class="result-link">
+          <a id="tg-link" href="#" target="_blank">Open in Telegram</a>
+        </div>
+
+        <div class="result-url" id="result-url" onclick="copyUrl(this)" title="Click to copy"></div>
+
+        <div class="hint hint-green" style="margin-top: 1rem; text-align: left;">
+          <strong>On your phone:</strong> tap the link or scan the QR code. Telegram will open and ask to enable the proxy. Tap <strong>Connect</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn btn-secondary" onclick="goStep(2)">&larr; Back</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://teleproxy.github.io">Teleproxy</a> &middot;
+    <a href="https://github.com/teleproxy/teleproxy">GitHub</a> &middot;
+    <a href="https://t.me/teleproxy_dev">Telegram</a>
+    <br>
+    All cryptographic operations run locally in your browser. Nothing is transmitted.
+  </div>
+
+</div>
+
+<!-- QR Code library (MIT, ~15KB) -->
+<script>
+// Minimal QR code generator — adapted from kazuhikoarase/qrcode-generator (MIT)
+// Only the subset needed: alphanumeric + byte mode, error correction L
+var qrcode=function(){function e(e,t){this.typeNumber=e;this.errorCorrectLevel=t;this.modules=null;this.moduleCount=0;this.dataCache=null;this.dataList=[]}function t(e,t){this.mode=4;this.data=e;this.parsedData=[];for(var r=0;r<this.data.length;r++){var n=this.data.charCodeAt(r);if(n>65536){this.parsedData.push(240|(n&1835008)>>18);this.parsedData.push(128|(n&258048)>>12);this.parsedData.push(128|(n&4032)>>6);this.parsedData.push(128|n&63)}else if(n>2048){this.parsedData.push(224|(n&61440)>>12);this.parsedData.push(128|(n&4032)>>6);this.parsedData.push(128|n&63)}else if(n>128){this.parsedData.push(192|(n&1984)>>6);this.parsedData.push(128|n&63)}else this.parsedData.push(n)}this.parsedData.length!=this.data.length&&(this.parsedData.unshift(191),this.parsedData.unshift(187),this.parsedData.unshift(239))}function r(e,t){this.totalCount=e;this.dataCount=t}function n(){this.buffer=[];this.length=0}e.prototype={addData:function(e){this.dataList.push(new t(e));this.dataCache=null},make:function(){if(this.typeNumber<1){var e=1;for(e=1;e<40;e++){var t=r.getRSBlocks(e,this.errorCorrectLevel),n=new N;for(var i=0;i<this.dataList.length;i++)n.put(this.dataList[i].mode,4),n.put(this.dataList[i].parsedData.length,s(this.dataList[i].mode,e)),n.putBytes(this.dataList[i].parsedData);var o=0;for(i=0;i<t.length;i++)o+=t[i].dataCount;if(n.length<=o*8)break}this.typeNumber=e}this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(e,t){this.moduleCount=this.typeNumber*4+17;this.modules=new Array(this.moduleCount);for(var r=0;r<this.moduleCount;r++){this.modules[r]=new Array(this.moduleCount);for(var n=0;n<this.moduleCount;n++)this.modules[r][n]=null}this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupPositionAdjustPattern();this.setupTimingPattern();this.setupTypeInfo(e,t);this.typeNumber>=7&&this.setupTypeNumber(e);this.dataCache==null&&(this.dataCache=c(this.typeNumber,this.errorCorrectLevel,this.dataList));this.mapData(this.dataCache,t)},setupPositionProbePattern:function(e,t){for(var r=-1;r<=7;r++){if(e+r<=-1||this.moduleCount<=e+r)continue;for(var n=-1;n<=7;n++){if(t+n<=-1||this.moduleCount<=t+n)continue;this.modules[e+r][t+n]=0<=r&&r<=6&&(n==0||n==6)||0<=n&&n<=6&&(r==0||r==6)||2<=r&&r<=4&&2<=n&&n<=4?!0:!1}}},getBestMaskPattern:function(){var e=0,t=0;for(var r=0;r<8;r++){this.makeImpl(!0,r);var n=o.getLostPoint(this);(r==0||e>n)&&(e=n,t=r)}return t},setupTimingPattern:function(){for(var e=8;e<this.moduleCount-8;e++){if(this.modules[e][6]!=null)continue;this.modules[e][6]=e%2==0}for(var t=8;t<this.moduleCount-8;t++){if(this.modules[6][t]!=null)continue;this.modules[6][t]=t%2==0}},setupPositionAdjustPattern:function(){var e=o.getPatternPosition(this.typeNumber);for(var t=0;t<e.length;t++)for(var r=0;r<e.length;r++){var n=e[t],i=e[r];if(this.modules[n][i]!=null)continue;for(var s=-2;s<=2;s++)for(var a=-2;a<=2;a++)this.modules[n+s][i+a]=s==-2||s==2||a==-2||a==2||s==0&&a==0?!0:!1}},setupTypeNumber:function(e){var t=o.getBCHTypeNumber(this.typeNumber);for(var r=0;r<18;r++){var n=!e&&(t>>r&1)==1;this.modules[Math.floor(r/3)][r%3+this.moduleCount-8-3]=n}for(var r=0;r<18;r++){var n=!e&&(t>>r&1)==1;this.modules[r%3+this.moduleCount-8-3][Math.floor(r/3)]=n}},setupTypeInfo:function(e,t){var r=this.errorCorrectLevel<<3|t,n=o.getBCHTypeInfo(r);for(var i=0;i<15;i++){var s=!e&&(n>>i&1)==1;i<6?this.modules[i][8]=s:i<8?this.modules[i+1][8]=s:this.modules[this.moduleCount-15+i][8]=s}for(var i=0;i<15;i++){var s=!e&&(n>>i&1)==1;i<8?this.modules[8][this.moduleCount-i-1]=s:i<9?this.modules[8][15-i-1+1]=s:this.modules[8][15-i-1]=s}this.modules[this.moduleCount-8][8]=!e},mapData:function(e,t){var r=-1,n=this.moduleCount-1,i=7,s=0;for(var a=this.moduleCount-1;a>0;a-=2){a==6&&a--;for(;;){for(var u=0;u<2;u++){if(this.modules[n][a-u]==null){var f=!1;s<e.length&&(f=(e[s]>>>i&1)==1);o.getMask(t,n,a-u)&&(f=!f);this.modules[n][a-u]=f;i--;i==-1&&(s++,i=7)}}n+=r;if(n<0||this.moduleCount<=n){n-=r;r=-r;break}}}}},t.prototype={getLength:function(){return this.parsedData.length}};function s(e,t){if(e==4)return t<10?8:16;throw"mode:"+e}function o(){};o.getBCHTypeInfo=function(e){var t=e<<10;while(o.getBCHDigit(t)-o.getBCHDigit(1335)>=0)t^=1335<<o.getBCHDigit(t)-o.getBCHDigit(1335);return(e<<10|t)^21522};o.getBCHTypeNumber=function(e){var t=e<<12;while(o.getBCHDigit(t)-o.getBCHDigit(7973)>=0)t^=7973<<o.getBCHDigit(t)-o.getBCHDigit(7973);return e<<12|t};o.getBCHDigit=function(e){var t=0;while(e!=0)t++,e>>>=1;return t};o.getPatternPosition=function(e){return u[e-1]};o.getMask=function(e,t,r){switch(e){case 0:return(t+r)%2==0;case 1:return t%2==0;case 2:return r%3==0;case 3:return(t+r)%3==0;case 4:return(Math.floor(t/2)+Math.floor(r/3))%2==0;case 5:return t*r%2+t*r%3==0;case 6:return(t*r%2+t*r%3)%2==0;case 7:return(t*r%3+(t+r)%2)%2==0;default:throw"bad maskPattern:"+e}};o.getErrorCorrectPolynomial=function(e){var t=new a([1],0);for(var r=0;r<e;r++)t=t.multiply(new a([1,f.gexp(r)],0));return t};o.getLengthInBits=function(e,t){if(e==4)return t<10?8:16;throw"mode:"+e};o.getLostPoint=function(e){var t=e.moduleCount,r=0;for(var n=0;n<t;n++)for(var i=0;i<t;i++){var s=0,o=e.modules[n][i];for(var a=-1;a<=1;a++){if(n+a<0||t<=n+a)continue;for(var u=-1;u<=1;u++){if(i+u<0||t<=i+u)continue;if(a==0&&u==0)continue;o==e.modules[n+a][i+u]&&s++}}s>5&&(r+=3+s-5)}for(var n=0;n<t-1;n++)for(var i=0;i<t-1;i++){var f=0;e.modules[n][i]&&f++;e.modules[n+1][i]&&f++;e.modules[n][i+1]&&f++;e.modules[n+1][i+1]&&f++;if(f==0||f==4)r+=3}for(var n=0;n<t;n++)for(var i=0;i<t-6;i++)e.modules[n][i]&&!e.modules[n][i+1]&&e.modules[n][i+2]&&e.modules[n][i+3]&&e.modules[n][i+4]&&!e.modules[n][i+5]&&e.modules[n][i+6]&&(r+=40);for(var i=0;i<t;i++)for(var n=0;n<t-6;n++)e.modules[n][i]&&!e.modules[n+1][i]&&e.modules[n+2][i]&&e.modules[n+3][i]&&e.modules[n+4][i]&&!e.modules[n+5][i]&&e.modules[n+6][i]&&(r+=40);var l=0;for(var i=0;i<t;i++)for(var n=0;n<t;n++)e.modules[n][i]&&l++;return r+=Math.abs(100*l/t/t-50)/5*10,r};var u=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]];function f(){};f.glog=function(e){if(e<1)throw"glog("+e+")";return f.LOG_TABLE[e]};f.gexp=function(e){while(e<0)e+=255;while(e>=256)e-=255;return f.EXP_TABLE[e]};f.EXP_TABLE=new Array(256);f.LOG_TABLE=new Array(256);for(var l=0;l<8;l++)f.EXP_TABLE[l]=1<<l;for(var l=8;l<256;l++)f.EXP_TABLE[l]=f.EXP_TABLE[l-4]^f.EXP_TABLE[l-5]^f.EXP_TABLE[l-6]^f.EXP_TABLE[l-8];for(var l=0;l<255;l++)f.LOG_TABLE[f.EXP_TABLE[l]]=l;function a(e,t){if(e.length==undefined)throw e.length+"/"+t;var r=0;while(r<e.length&&e[r]==0)r++;this.num=new Array(e.length-r+t);for(var n=0;n<e.length-r;n++)this.num[n]=e[n+r]}a.prototype={get:function(e){return this.num[e]},getLength:function(){return this.num.length},multiply:function(e){var t=new Array(this.getLength()+e.getLength()-1);for(var r=0;r<this.getLength();r++)for(var n=0;n<e.getLength();n++)t[r+n]^=f.gexp(f.glog(this.get(r))+f.glog(e.get(n)));return new a(t,0)},mod:function(e){if(this.getLength()-e.getLength()<0)return this;var t=f.glog(this.get(0))-f.glog(e.get(0)),r=new Array(this.getLength());for(var n=0;n<this.getLength();n++)r[n]=this.get(n);for(var n=0;n<e.getLength();n++)r[n]^=f.gexp(f.glog(e.get(n))+t);return(new a(r,0)).mod(e)}};r.RS_BLOCK_TABLE=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]];r.getRSBlocks=function(e,t){var n=r.getRsBlockTable(e,t);if(n==undefined)throw"bad rs block @ typeNumber:"+e+"/errorCorrectLevel:"+t;var i=n.length/3,s=[];for(var o=0;o<i;o++){var a=n[o*3+0],u=n[o*3+1],f=n[o*3+2];for(var l=0;l<a;l++)s.push(new r(u,f))}return s};r.getRsBlockTable=function(e,t){switch(t){case 1:return r.RS_BLOCK_TABLE[(e-1)*4+0];case 0:return r.RS_BLOCK_TABLE[(e-1)*4+1];case 3:return r.RS_BLOCK_TABLE[(e-1)*4+2];case 2:return r.RS_BLOCK_TABLE[(e-1)*4+3];default:return undefined}};function N(){this.buffer=[];this.length=0}N.prototype={get:function(e){var t=Math.floor(e/8);return(this.buffer[t]>>>7-e%8&1)==1},put:function(e,t){for(var r=0;r<t;r++)this.putBit((e>>>t-r-1&1)==1)},putBytes:function(e){for(var t=0;t<e.length;t++)this.put(e[t],8)},getLengthInBits:function(){return this.length},putBit:function(e){var t=Math.floor(this.length/8);this.buffer.length<=t&&this.buffer.push(0);e&&(this.buffer[t]|=128>>>this.length%8);this.length++}};function c(e,t,i){var s=r.getRSBlocks(e,t),a=new N;for(var u=0;u<i.length;u++){var f=i[u];a.put(f.mode,4);a.put(f.parsedData.length,o.getLengthInBits(f.mode,e));a.putBytes(f.parsedData)}var l=0;for(var u=0;u<s.length;u++)l+=s[u].dataCount;if(a.getLengthInBits()>l*8)throw"code length overflow. ("+a.getLengthInBits()+">"+l*8+")";a.getLengthInBits()+4<=l*8&&a.put(0,4);while(a.getLengthInBits()%8!=0)a.putBit(!1);while(true){if(a.getLengthInBits()>=l*8)break;a.put(236,8);if(a.getLengthInBits()>=l*8)break;a.put(17,8)}return h(a,s)}function h(e,t){var r=0,n=0,i=0,s=new Array(t.length),u=new Array(t.length),l=0;for(var c=0;c<t.length;c++){var h=t[c].dataCount,p=t[c].totalCount-h;n=Math.max(n,h);i=Math.max(i,p);s[c]=new Array(h);for(var d=0;d<s[c].length;d++)s[c][d]=255&e.buffer[d+r];r+=h;var v=o.getErrorCorrectPolynomial(p),m=new a(s[c],v.getLength()-1),g=m.mod(v);u[c]=new Array(v.getLength()-1);for(var d=0;d<u[c].length;d++){var y=d+g.getLength()-u[c].length;u[c][d]=y>=0?g.get(y):0}l+=t[c].totalCount}var b=new Array(l),w=0;for(var d=0;d<n;d++)for(var c=0;c<t.length;c++)d<s[c].length&&(b[w++]=s[c][d]);for(var d=0;d<i;d++)for(var c=0;c<t.length;c++)d<u[c].length&&(b[w++]=u[c][d]);return b}e.createQR=function(t,r){var n=new e(0,r||1);n.addData(t);n.make();return n};return e}();
+</script>
+
+<script>
+// ── Application logic ───────────────────────────────────
+(function() {
+  'use strict';
+
+  // Domain list (loaded from domains.json or fallback)
+  var DOMAINS = [];
+  var state = {
+    secret: '',
+    domain: '',
+    port: 443,
+    step: 1
+  };
+
+  // ── Init ──────────────────────────────────────────────
+  function init() {
+    // Try to restore from sessionStorage
+    var saved = sessionStorage.getItem('teleproxy_deploy');
+    if (saved) {
+      try {
+        var s = JSON.parse(saved);
+        state.secret = s.secret || '';
+        state.domain = s.domain || '';
+        state.port = s.port || 443;
+      } catch(e) {}
+    }
+
+    // Load domains then generate
+    loadDomains(function() {
+      if (!state.secret) state.secret = generateSecret();
+      if (!state.domain) state.domain = pickDomain();
+      document.getElementById('opt-port').value = state.port;
+      document.getElementById('opt-domain').value = state.domain;
+      document.getElementById('opt-secret').value = state.secret;
+      renderScript();
+      saveState();
+    });
+
+    // Enter key on IP input
+    document.getElementById('ip-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') generateLink();
+    });
+  }
+
+  function loadDomains(cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'domains.json', true);
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try { DOMAINS = JSON.parse(xhr.responseText); } catch(e) {}
+      }
+      if (!DOMAINS.length) DOMAINS = ['www.cloudflare.com','www.shopify.com','www.booking.com','www.reuters.com'];
+      cb();
+    };
+    xhr.onerror = function() {
+      DOMAINS = ['www.cloudflare.com','www.shopify.com','www.booking.com','www.reuters.com'];
+      cb();
+    };
+    xhr.send();
+  }
+
+  function generateSecret() {
+    var bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+
+  function pickDomain() {
+    var idx = Math.floor(Math.random() * DOMAINS.length);
+    return DOMAINS[idx];
+  }
+
+  function saveState() {
+    sessionStorage.setItem('teleproxy_deploy', JSON.stringify({
+      secret: state.secret,
+      domain: state.domain,
+      port: state.port
+    }));
+  }
+
+  // ── Script rendering ──────────────────────────────────
+  function renderScript() {
+    var script =
+      '#!/bin/bash\n' +
+      '# Teleproxy \u2014 paste into "User Data" when creating a VPS.\n' +
+      '# Ubuntu 22.04/24.04 or Debian 12.\n' +
+      '\n' +
+      'export SECRET="' + state.secret + '"\n' +
+      'export EE_DOMAIN="' + state.domain + '"\n';
+
+    if (state.port !== 443) {
+      script += 'export PORT="' + state.port + '"\n';
+    }
+
+    script +=
+      '\napt-get update -y && apt-get install -y curl\n' +
+      'curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh\n';
+
+    document.getElementById('script-output').textContent = script;
+  }
+
+  // ── Link construction ─────────────────────────────────
+  function domainToHex(domain) {
+    var hex = '';
+    for (var i = 0; i < domain.length; i++) {
+      hex += domain.charCodeAt(i).toString(16).padStart(2, '0');
+    }
+    return hex;
+  }
+
+  function buildProxyLink(ip) {
+    var domainHex = domainToHex(state.domain);
+    var fullSecret = 'ee' + state.secret + domainHex;
+    return 'tg://proxy?server=' + ip + '&port=' + state.port + '&secret=' + fullSecret;
+  }
+
+  function buildHttpsLink(ip) {
+    var domainHex = domainToHex(state.domain);
+    var fullSecret = 'ee' + state.secret + domainHex;
+    return 'https://t.me/proxy?server=' + ip + '&port=' + state.port + '&secret=' + fullSecret;
+  }
+
+  // ── QR rendering ──────────────────────────────────────
+  function renderQR(text) {
+    var qr = qrcode.createQR(text, 1); // error correction L
+    var canvas = document.getElementById('qr-canvas');
+    var size = 200;
+    var moduleCount = qr.moduleCount;
+    var cellSize = Math.floor(size / moduleCount);
+    var actualSize = cellSize * moduleCount;
+    canvas.width = actualSize;
+    canvas.height = actualSize;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, actualSize, actualSize);
+    ctx.fillStyle = '#0c1520';
+    for (var r = 0; r < moduleCount; r++) {
+      for (var c = 0; c < moduleCount; c++) {
+        if (qr.modules[r][c]) {
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+  }
+
+  // ── IP validation ─────────────────────────────────────
+  function isValidIP(ip) {
+    // IPv4
+    var v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    var m = ip.match(v4);
+    if (m) {
+      for (var i = 1; i <= 4; i++) {
+        if (parseInt(m[i], 10) > 255) return false;
+      }
+      return true;
+    }
+    // Basic IPv6 check
+    if (ip.indexOf(':') !== -1 && /^[0-9a-fA-F:]+$/.test(ip)) return true;
+    return false;
+  }
+
+  // ── Public API ────────────────────────────────────────
+  window.goStep = function(n) {
+    state.step = n;
+    var tabs = document.querySelectorAll('.step-tab');
+    var panels = document.querySelectorAll('.step-panel');
+    tabs.forEach(function(tab) {
+      var s = parseInt(tab.dataset.step);
+      tab.classList.remove('active', 'done');
+      if (s < n) tab.classList.add('done');
+      if (s === n) tab.classList.add('active');
+    });
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById('step-' + n).classList.add('active');
+
+    if (n === 3) {
+      document.getElementById('result').classList.remove('visible');
+      var ipInput = document.getElementById('ip-input');
+      setTimeout(function() { ipInput.focus(); }, 100);
+    }
+  };
+
+  window.copyScript = function() {
+    var text = document.getElementById('script-output').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.getElementById('copy-btn');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Copied';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  };
+
+  window.copyUrl = function(el) {
+    navigator.clipboard.writeText(el.textContent).then(function() {
+      var orig = el.textContent;
+      el.textContent = 'Copied!';
+      el.style.color = 'var(--green)';
+      setTimeout(function() {
+        el.textContent = orig;
+        el.style.color = '';
+      }, 1500);
+    });
+  };
+
+  window.toggleOptions = function() {
+    document.getElementById('options-panel').classList.toggle('open');
+  };
+
+  window.regenerateScript = function() {
+    var port = parseInt(document.getElementById('opt-port').value, 10);
+    var domain = document.getElementById('opt-domain').value.trim();
+    var secret = document.getElementById('opt-secret').value.trim();
+
+    if (port >= 1 && port <= 65535) state.port = port;
+    if (domain) state.domain = domain;
+    if (/^[0-9a-fA-F]{32}$/.test(secret)) state.secret = secret;
+
+    renderScript();
+    saveState();
+  };
+
+  window.generateLink = function() {
+    var ipInput = document.getElementById('ip-input');
+    var ip = ipInput.value.trim();
+
+    if (!isValidIP(ip)) {
+      ipInput.classList.add('error');
+      setTimeout(function() { ipInput.classList.remove('error'); }, 1500);
+      return;
+    }
+
+    var tgLink = buildProxyLink(ip);
+    var httpsLink = buildHttpsLink(ip);
+
+    // Render QR with https link (more compatible with scanners)
+    renderQR(httpsLink);
+
+    // Set link and URL
+    document.getElementById('tg-link').href = tgLink;
+    document.getElementById('result-url').textContent = httpsLink;
+
+    // Show result
+    document.getElementById('result').classList.add('visible');
+  };
+
+  // Boot
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
