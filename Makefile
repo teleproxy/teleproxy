@@ -72,20 +72,20 @@ CINCLUDE = -iquote src/common -iquote src/common/toml -iquote src -iquote .
 
 LIBLIST = ${LIB}/libkdb.a
 
-PROJECTS = src/common src/common/toml src/jobs src/mtproto src/net src/crypto src/engine
+PROJECTS = src/common src/common/toml src/common/qrcode src/jobs src/mtproto src/net src/crypto src/engine
 
 OBJDIRS := ${OBJ} $(addprefix ${OBJ}/,${PROJECTS}) ${EXE} ${LIB}
 DEPDIRS := ${DEP} $(addprefix ${DEP}/,${PROJECTS})
 ALLDIRS := ${DEPDIRS} ${OBJDIRS}
 
 
-.PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-ip-acl test-drs-delays test-cdn-dc test-ipv6-direct test-dc-lookup test-config-reload test-check docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
+.PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-ip-acl test-drs-delays test-cdn-dc test-ipv6-direct test-dc-lookup test-config-reload test-check test-link docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
 
 EXELIST	:= ${EXE}/teleproxy
 
 
 OBJECTS	=	\
-  ${OBJ}/src/mtproto/mtproto-proxy.o ${OBJ}/src/mtproto/mtproto-config.o ${OBJ}/src/mtproto/mtproto-dc-table.o ${OBJ}/src/mtproto/mtproto-check.o ${OBJ}/src/net/net-tcp-rpc-ext-server.o
+  ${OBJ}/src/mtproto/mtproto-proxy.o ${OBJ}/src/mtproto/mtproto-config.o ${OBJ}/src/mtproto/mtproto-dc-table.o ${OBJ}/src/mtproto/mtproto-check.o ${OBJ}/src/mtproto/mtproto-link.o ${OBJ}/src/net/net-tcp-rpc-ext-server.o
 
 DEPENDENCE_CXX		:=	$(subst ${OBJ}/,${DEP}/,$(patsubst %.o,%.d,${OBJECTS_CXX}))
 DEPENDENCE_STRANGE	:=	$(subst ${OBJ}/,${DEP}/,$(patsubst %.o,%.d,${OBJECTS_STRANGE}))
@@ -117,6 +117,7 @@ LIB_OBJS_NORMAL := \
 	${OBJ}/src/common/precise-time.o ${OBJ}/src/common/cpuid.o \
 	${OBJ}/src/common/server-functions.o ${OBJ}/src/common/crc32.o \
 	${OBJ}/src/common/toml/tomlc17.o ${OBJ}/src/common/toml-config.o \
+	${OBJ}/src/common/qrcode/qrcodegen.o \
 
 LIB_OBJS := ${LIB_OBJS_NORMAL}
 
@@ -143,7 +144,7 @@ ${LIB_OBJS_NORMAL}: ${OBJ}/%.o: %.c | create_dirs_and_headers
 
 ${EXELIST}: ${LIBLIST}
 
-${EXE}/teleproxy:	${OBJ}/src/mtproto/mtproto-proxy.o ${OBJ}/src/mtproto/mtproto-config.o ${OBJ}/src/mtproto/mtproto-dc-table.o ${OBJ}/src/mtproto/mtproto-check.o ${OBJ}/src/net/net-tcp-rpc-ext-server.o
+${EXE}/teleproxy:	${OBJ}/src/mtproto/mtproto-proxy.o ${OBJ}/src/mtproto/mtproto-config.o ${OBJ}/src/mtproto/mtproto-dc-table.o ${OBJ}/src/mtproto/mtproto-check.o ${OBJ}/src/mtproto/mtproto-link.o ${OBJ}/src/net/net-tcp-rpc-ext-server.o
 	${CC} -o $@ $^ ${LDFLAGS}
 
 ${LIB}/libkdb.a: ${LIB_OBJS}
@@ -158,6 +159,7 @@ lint:
 	  --suppressions-list=.cppcheck-suppressions \
 	  --suppress=missingIncludeSystem \
 	  --std=c11 -I src/common -I src -I . \
+	  -i src/common/qrcode/ \
 	  src/common/ src/jobs/ src/mtproto/ src/net/ src/crypto/ src/engine/
 
 force-clean: clean
@@ -334,6 +336,12 @@ test-check:
 		(echo "Check subcommand test failed"; \
 		docker compose -f tests/docker-compose.check-test.yml down; exit 1)
 	docker compose -f tests/docker-compose.check-test.yml down
+
+test-link:
+	timeout 120s docker compose -f tests/docker-compose.link-test.yml up --build --exit-code-from tester || \
+		(echo "Link subcommand test failed"; \
+		docker compose -f tests/docker-compose.link-test.yml down; exit 1)
+	docker compose -f tests/docker-compose.link-test.yml down
 
 test-dc-lookup:
 	$(MAKE) -C fuzz test

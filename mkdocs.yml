@@ -67,6 +67,7 @@ plugins:
             Direct-to-DC Mode: Прямое подключение к DC
             IP Access Control: Контроль доступа по IP
             "Secrets & Limits": "Секреты и лимиты"
+            Connection Links: Ссылки подключения
             Diagnostics: Диагностика
             Deployment: Развёртывание
             Systemd: Systemd
@@ -90,6 +91,7 @@ plugins:
             Direct-to-DC Mode: اتصال مستقیم به DC
             IP Access Control: کنترل دسترسی IP
             "Secrets & Limits": "رمزها و محدودیت‌ها"
+            Connection Links: لینک‌های اتصال
             Diagnostics: تشخیص
             Deployment: استقرار
             Systemd: Systemd
@@ -113,6 +115,7 @@ plugins:
             Direct-to-DC Mode: Kết nối trực tiếp đến DC
             IP Access Control: Kiểm soát truy cập IP
             "Secrets & Limits": "Bí mật & Giới hạn"
+            Connection Links: Liên kết kết nối
             Diagnostics: Chẩn đoán
             Deployment: Triển khai
             Systemd: Systemd
@@ -155,6 +158,7 @@ nav:
     - IP Access Control: features/access-control.md
     - Secrets & Limits: features/secrets.md
     - Monitoring: features/monitoring.md
+    - Connection Links: features/link.md
     - Diagnostics: features/diagnostics.md
   - Deployment:
     - Systemd: deployment/systemd.md

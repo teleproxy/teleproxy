@@ -61,6 +61,7 @@
 #include "net/net-crypto-aes.h"
 #include "net/net-crypto-dh.h"
 #include "mtproto-check.h"
+#include "mtproto-link.h"
 #include "mtproto-common.h"
 #include "mtproto-config.h"
 #include "mtproto-dc-table.h"
@@ -3084,6 +3085,9 @@ int main (int argc, char *argv[]) {
   /* Subcommand dispatch — checked before engine init */
   if (argc >= 2 && !strcmp (argv[1], "check")) {
     return cmd_check (argc - 1, argv + 1);
+  }
+  if (argc >= 2 && !strcmp (argv[1], "link")) {
+    return cmd_link (argc - 1, argv + 1);
   }
   if (argc >= 2 && !strcmp (argv[1], "generate-secret")) {
     return cmd_generate_secret (argc - 2, argv + 2);

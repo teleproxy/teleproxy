@@ -270,9 +270,9 @@ for _s in "$@"; do
     else
         _full="$_secret_hex"
     fi
-    _label_display=""
-    [ -n "$_label" ] && _label_display=" [$_label]"
-    echo "https://t.me/proxy?server=${_host}&port=${PORT}&secret=${_full}${_label_display}"
+    _label_arg=""
+    [ -n "$_label" ] && _label_arg="--label $_label"
+    ./teleproxy link --server "$_host" --port "$PORT" --secret "$_full" $_label_arg
 done
 if [ "$_host" = "<YOUR_SERVER_IP>" ]; then
     echo "(Set EXTERNAL_IP to show your server's IP)"

@@ -219,9 +219,7 @@ fi
 
 echo ""
 echo "===== Connection Link ====="
-echo "https://t.me/proxy?server=${EXT_IP}&port=${PORT}&secret=${LINK_SECRET}"
-echo ""
-echo "tg://proxy?server=${EXT_IP}&port=${PORT}&secret=${LINK_SECRET}"
+teleproxy link --server "$EXT_IP" --port "$PORT" --secret "$LINK_SECRET"
 echo "==========================="
 echo ""
 echo "Manage:"

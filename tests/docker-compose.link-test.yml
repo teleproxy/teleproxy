@@ -1,0 +1,7 @@
+services:
+  tester:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.link
+    environment:
+      - TELEPROXY_BIN=/usr/local/bin/teleproxy
