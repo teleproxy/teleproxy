@@ -70,11 +70,13 @@ plugins:
             "Secrets & Limits": "Секреты и лимиты"
             Connection Links: Ссылки подключения
             Diagnostics: Диагностика
+            SOCKS5 Upstream Proxy: SOCKS5 прокси
             Deployment: Развёртывание
             Systemd: Systemd
             IPv6: IPv6
             Testing: Тестирование
             Changelog: Журнал изменений
+            Observatory: Обсерватория
         - locale: fa
           name: فارسی
           build: true
@@ -95,11 +97,13 @@ plugins:
             "Secrets & Limits": "رمزها و محدودیت‌ها"
             Connection Links: لینک‌های اتصال
             Diagnostics: تشخیص
+            SOCKS5 Upstream Proxy: پروکسی SOCKS5
             Deployment: استقرار
             Systemd: Systemd
             IPv6: IPv6
             Testing: تست
             Changelog: تاریخچه تغییرات
+            Observatory: رصدخانه
         - locale: vi
           name: Tiếng Việt
           build: true
@@ -120,11 +124,13 @@ plugins:
             "Secrets & Limits": "Bí mật & Giới hạn"
             Connection Links: Liên kết kết nối
             Diagnostics: Chẩn đoán
+            SOCKS5 Upstream Proxy: Proxy SOCKS5
             Deployment: Triển khai
             Systemd: Systemd
             IPv6: IPv6
             Testing: Kiểm thử
             Changelog: Nhật ký thay đổi
+            Observatory: Quan sát
 
 markdown_extensions:
   - admonition
@@ -170,3 +176,4 @@ nav:
     - IPv6: deployment/ipv6.md
   - Testing: testing.md
   - Changelog: changelog.md
+  - Observatory: https://teleproxy.github.io/observatory/
