@@ -203,6 +203,7 @@ struct ext_connection_ref {
 long long ext_connections, ext_connections_created;
 long long per_secret_connections[16], per_secret_connections_created[16];
 long long per_secret_connections_rejected[16];
+long long per_secret_bytes_received[16], per_secret_bytes_sent[16];
 
 struct ext_connection_ref OutExtConnections[EXT_CONN_TABLE_SIZE];
 struct ext_connection *InExtConnectionHash[EXT_CONN_HASH_SIZE];
@@ -429,6 +430,8 @@ struct worker_stats {
   long long per_secret_connections[16];
   long long per_secret_connections_created[16];
   long long per_secret_connections_rejected[16];
+  long long per_secret_bytes_received[16];
+  long long per_secret_bytes_sent[16];
 };
 
 struct worker_stats *WStats, SumStats;
@@ -500,6 +503,8 @@ static void update_local_stats_copy (struct worker_stats *S) {
     UPD (per_secret_connections[_i]);
     UPD (per_secret_connections_created[_i]);
     UPD (per_secret_connections_rejected[_i]);
+    UPD (per_secret_bytes_received[_i]);
+    UPD (per_secret_bytes_sent[_i]);
   }}
 #undef UPD
   __sync_synchronize();
@@ -588,6 +593,8 @@ static inline void add_stats (struct worker_stats *W) {
     UPD (per_secret_connections[_i]);
     UPD (per_secret_connections_created[_i]);
     UPD (per_secret_connections_rejected[_i]);
+    UPD (per_secret_bytes_received[_i]);
+    UPD (per_secret_bytes_sent[_i]);
   }}
 #undef UPD
 }
@@ -1038,6 +1045,20 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
       for (_i = 0; _i < _sc; _i++) {
         sb_printf (sb, "teleproxy_secret_connections_rejected_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections_rejected[_i]));
+      }
+      sb_printf (sb,
+	       "# HELP teleproxy_secret_bytes_received_total Bytes received from clients per secret.\n"
+	       "# TYPE teleproxy_secret_bytes_received_total counter\n");
+      for (_i = 0; _i < _sc; _i++) {
+        sb_printf (sb, "teleproxy_secret_bytes_received_total{secret=\"%s\"} %lld\n",
+	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_bytes_received[_i]));
+      }
+      sb_printf (sb,
+	       "# HELP teleproxy_secret_bytes_sent_total Bytes sent to clients per secret.\n"
+	       "# TYPE teleproxy_secret_bytes_sent_total counter\n");
+      for (_i = 0; _i < _sc; _i++) {
+        sb_printf (sb, "teleproxy_secret_bytes_sent_total{secret=\"%s\"} %lld\n",
+	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_bytes_sent[_i]));
       }
     }
   }

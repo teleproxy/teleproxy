@@ -177,6 +177,7 @@ extern long long direct_dc_connections_failed, direct_dc_connections_dc_closed;
 extern long long direct_dc_retries;
 extern long long per_secret_connections[16], per_secret_connections_created[16];
 extern long long per_secret_connections_rejected[16];
+extern long long per_secret_bytes_received[16], per_secret_bytes_sent[16];
 extern long long transport_errors_received;
 extern long long quickack_packets_received;
 
@@ -278,6 +279,10 @@ static int tcp_direct_client_parse_execute (connection_job_t C) {
     vkprintf (2, "direct client: DC not ready yet, deferring %d bytes\n", c->in.total_bytes);
     return NEED_MORE_BYTES;
   }
+  int sid = TCP_RPC_DATA(C)->extra_int2;
+  if (sid > 0 && sid <= 16 && c->in.total_bytes > 0) {
+    per_secret_bytes_received[sid - 1] += c->in.total_bytes;
+  }
   return tcp_direct_relay (C);
 }
 
@@ -295,6 +300,12 @@ static int tcp_direct_dc_parse_execute (connection_job_t C) {
     }
   }
 
+  if (c->extra && c->in.total_bytes > 0) {
+    int sid = TCP_RPC_DATA((connection_job_t) c->extra)->extra_int2;
+    if (sid > 0 && sid <= 16) {
+      per_secret_bytes_sent[sid - 1] += c->in.total_bytes;
+    }
+  }
   return tcp_direct_relay (C);
 }
 
