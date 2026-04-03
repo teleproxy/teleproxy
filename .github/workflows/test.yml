@@ -302,7 +302,7 @@ jobs:
         nc -z 127.0.0.1 1080 || { echo "ERROR: SOCKS5 server not ready"; exit 1; }
 
         ./teleproxy -u nobody -p 10888 -H 10443 -S $SECRET \
-          --http-stats --direct --socks5 socks5://127.0.0.1:1080 -M 0 2>socks5.log &
+          --http-stats --direct --socks5 socks5://127.0.0.1:1080 -M 0 -v 1 2>socks5.log &
         echo "Started SOCKS5-proxied proxy on port 10443"
 
         # Wait for all proxies to be ready

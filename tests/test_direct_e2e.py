@@ -699,8 +699,10 @@ def main():
     if socks5_stats_port:
         print("  socks5 proxy:")
         socks5_stats_ok, socks5_stats = _check_proxy_stats(socks5_stats_port)
+        for key in ["socks5_enabled", "socks5_connects_attempted",
+                     "socks5_connects_succeeded", "socks5_connects_failed"]:
+            print(f"    {key} = {socks5_stats.get(key, '?')}")
         s5_succ = int(socks5_stats.get("socks5_connects_succeeded", "0"))
-        print(f"    socks5_connects_succeeded = {s5_succ}")
         if socks5_ok and s5_succ == 0:
             print("    WARN: socks5 test passed but no SOCKS5 connects recorded")
 
