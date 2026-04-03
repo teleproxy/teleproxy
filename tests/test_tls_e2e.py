@@ -598,10 +598,10 @@ def test_emulation_matches_backend():
         f"\n    Extension order match: YES"
     )
 
-    # Total encrypted size should closely match (proxy combines multiple backend
-    # records into one for TDLib compatibility; ±4 tolerance for per-record
-    # size variance across independent probes)
-    assert abs(proxy["total_encrypted_size"] - backend["total_encrypted_size"]) <= 4, (
+    # Total encrypted size should be in the right ballpark.  The proxy adds
+    # uniform noise in [-32, +32] to defeat DPI size fingerprinting, so allow
+    # ±36 (32 noise + 4 for per-record variance across independent probes).
+    assert abs(proxy["total_encrypted_size"] - backend["total_encrypted_size"]) <= 36, (
         f"Total encrypted size mismatch: proxy={proxy['total_encrypted_size']}, "
         f"backend={backend['total_encrypted_size']}"
     )
