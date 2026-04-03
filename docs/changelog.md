@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.4.0
+
+- `teleproxy check` diagnostic subcommand — validates configuration and tests connectivity before accepting clients. Checks DC reachability, NTP clock drift, fake-TLS domain probe, and SNI/DNS mismatch. Exit 0/1/2 for pass/fail/bad-args.
+
 ## 4.3.0
 
 Direct mode connection resilience.
