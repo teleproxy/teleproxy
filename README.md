@@ -93,8 +93,9 @@ SECRET=$(head -c 16 /dev/urandom | xxd -ps)
 | Fake-TLS (EE mode) | Yes | Yes | Yes | Yes |
 | Direct-to-DC mode | No | Yes | Yes | Yes |
 | Multiple secrets | Yes | Yes (up to 16) | No | Yes |
-| Anti-replay protection | Weak | Yes | Yes | Partial |
+| Anti-replay protection | Weak | Yes | Yes | Yes |
 | Dynamic Record Sizing | No | Yes | Yes | No |
+| Per-secret byte quotas | No | Yes | No | Yes |
 | IP blocklist / allowlist | No | Yes | Yes | No |
 | Docker image | ~57 MB | ~8 MB | ~3.5 MB | ~5 MB |
 | ARM64 / Apple Silicon | No | Yes | Yes | Yes |

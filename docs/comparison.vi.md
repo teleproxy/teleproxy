@@ -10,18 +10,21 @@ Teleproxy là một fork của [TelegramMessenger/MTProxy](https://github.com/Te
 | Kết nối trực tiếp DC | Không | Có | Có | Có |
 | Tag quảng cáo | Có | Có | Không | Có |
 | Nhiều secret | Có | Có (tối đa 16, có nhãn) | Không | Có |
-| Chống replay attack | Yếu | Có | Có | Một phần |
-| HMAC thời gian hằng | Không | Có | — | Có |
+| Chống replay attack | Yếu | Có | Có | Có |
+| HMAC thời gian hằng | Không | Có | Có | Có |
 | ***Kháng DPI*** | | | | |
-| TLS backend tùy chỉnh (TCP splitting) | Có | Có | Không | Có |
+| TLS backend tùy chỉnh (TCP splitting) | Có | Có | Có | Có |
 | Dynamic Record Sizing (DRS) | Không | Có | Có | Không |
-| Giả lập traffic (DRS + timing) | Không | Có | Có | Không |
+| Giả lập traffic (DRS + timing) | Không | Có | Có | Một phần |
 | Phân mảnh ServerHello | Không | Có | Không | Không |
 | SOCKS5 upstream proxy | Không | Có | Có | Có |
+| DNS over HTTPS/TLS | Không | Không | Có | Không |
 | ***Kiểm soát truy cập*** | | | | |
 | IP blocklist / allowlist | Không | Có | Có | Không |
-| Giới hạn IP theo user | Không | Không | Không | Có |
-| Proxy Protocol v1/v2 | Không | Không | Có | Có |
+| Giới hạn IP theo user | Không | Có | Không | Có |
+| Hạn mức lưu lượng theo secret | Không | Có | Không | Có |
+| Hết hạn secret | Không | Có | Không | Có |
+| Proxy Protocol v1/v2 | Không | Có | Có | Có |
 | ***Triển khai*** | | | | |
 | Dung lượng Docker | ~57 MB | ~8 MB | ~3,5 MB | ~5 MB |
 | ARM64 / Apple Silicon | Không | Có | Có | Có |
@@ -29,10 +32,10 @@ Teleproxy là một fork của [TelegramMessenger/MTProxy](https://github.com/Te
 | Tiến trình multi-worker | Có | Có | — | — |
 | Binary tĩnh | Không | Có | Có | Có |
 | Gói RPM | Không | Có | Không | Không |
-| Tích hợp systemd | Một phần | Có | — | Có |
+| Tích hợp systemd | Một phần | Có | Không | Có |
 | ***Giám sát và quản lý*** | | | | |
 | Prometheus metrics | Không | Có | Có | Có |
-| HTTP stats endpoint | Có | Có | — | Có |
+| HTTP stats endpoint | Có | Có | Không | Có |
 | REST management API | Không | Không | Không | Có |
 | Tự động cập nhật cấu hình | Không | Có | Có | Có |
 | Health check | Không | Có | Có | Có |

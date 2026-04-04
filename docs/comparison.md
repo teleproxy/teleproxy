@@ -10,17 +10,20 @@ Teleproxy is a fork of the original [TelegramMessenger/MTProxy](https://github.c
 | Direct-to-DC mode | No | Yes | Yes | Yes |
 | Ad proxy tag | Yes | Yes | No | Yes |
 | Multiple secrets | Yes | Yes (up to 16, with labels) | No | Yes |
-| Anti-replay protection | Weak | Yes | Yes | Partial |
-| Constant-time HMAC | No | Yes | — | Yes |
+| Anti-replay protection | Weak | Yes | Yes | Yes |
+| Constant-time HMAC | No | Yes | Yes | Yes |
 | ***DPI resistance*** | | | | |
-| Custom TLS backend (TCP splitting) | Yes | Yes | No | Yes |
+| Custom TLS backend (TCP splitting) | Yes | Yes | Yes | Yes |
 | Dynamic Record Sizing (DRS) | No | Yes | Yes | No |
-| Traffic mimicry (DRS + timing) | No | Yes | Yes | No |
+| Traffic mimicry (DRS + timing) | No | Yes | Yes | Partial |
 | ServerHello fragmentation | No | Yes | No | No |
 | SOCKS5 upstream proxy | No | Yes | Yes | Yes |
+| DNS over HTTPS/TLS | No | No | Yes | No |
 | ***Access control*** | | | | |
 | IP blocklist / allowlist | No | Yes | Yes | No |
 | Per-user unique IP limits | No | Yes | No | Yes |
+| Per-secret byte quotas | No | Yes | No | Yes |
+| Secret expiration | No | Yes | No | Yes |
 | Proxy Protocol v1/v2 | No | Yes | Yes | Yes |
 | ***Deployment*** | | | | |
 | Docker image | ~57 MB | ~8 MB | ~3.5 MB | ~5 MB |
@@ -29,10 +32,10 @@ Teleproxy is a fork of the original [TelegramMessenger/MTProxy](https://github.c
 | Multi-worker processes | Yes | Yes | — | — |
 | Static binary releases | No | Yes | Yes | Yes |
 | RPM packages | No | Yes | No | No |
-| Systemd integration | Partial | Yes | — | Yes |
+| Systemd integration | Partial | Yes | No | Yes |
 | ***Monitoring & management*** | | | | |
 | Prometheus metrics | No | Yes | Yes | Yes |
-| HTTP stats endpoint | Yes | Yes | — | Yes |
+| HTTP stats endpoint | Yes | Yes | No | Yes |
 | REST management API | No | No | No | Yes |
 | Auto config refresh | No | Yes | Yes | Yes |
 | Health checks | No | Yes | Yes | Yes |
