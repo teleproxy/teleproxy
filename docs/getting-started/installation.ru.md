@@ -11,7 +11,7 @@ curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh 
 Настройка через переменные окружения:
 
 ```bash
-PORT=8443 EE_DOMAIN=www.google.com curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | PORT=8443 EE_DOMAIN=www.google.com sh
 ```
 
 ### Несколько секретов
@@ -19,22 +19,23 @@ PORT=8443 EE_DOMAIN=www.google.com curl -sSL https://raw.githubusercontent.com/t
 Автоматически сгенерировать несколько секретов:
 
 ```bash
-SECRET_COUNT=3 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | SECRET_COUNT=3 sh
 ```
 
 Или передать свои через запятую:
 
 ```bash
-SECRET=aabbccdd11223344aabbccdd11223344,eeff00112233445566778899aabbccdd \
-  curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | \
+  SECRET=aabbccdd11223344aabbccdd11223344,eeff00112233445566778899aabbccdd sh
 ```
 
 Нумерованные секреты с метками и лимитами подключений:
 
 ```bash
-SECRET_1=aabbccdd11223344aabbccdd11223344 SECRET_LABEL_1=family \
-SECRET_2=eeff00112233445566778899aabbccdd SECRET_LABEL_2=work SECRET_LIMIT_2=500 \
-  curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | \
+  SECRET_1=aabbccdd11223344aabbccdd11223344 SECRET_LABEL_1=family \
+  SECRET_2=eeff00112233445566778899aabbccdd SECRET_LABEL_2=work SECRET_LIMIT_2=500 \
+  sh
 ```
 
 Для каждого секрета будет выведен свой QR-код и ссылка. Добавить или удалить секреты после установки:
@@ -56,6 +57,22 @@ nano /etc/teleproxy/config.toml  # редактирование конфига
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh -s -- --uninstall
+```
+
+## Обновление
+
+Для обновления до последней версии просто запустите скрипт установки повторно:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+```
+
+Скрипт заменит бинарник и перезапустит сервис. Существующий конфиг (`/etc/teleproxy/config.toml`) — секреты, порты, домен — сохраняется.
+
+Для установки конкретной версии:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | TELEPROXY_VERSION=1.2.3 sh
 ```
 
 ## Готовый бинарник (любой Linux)

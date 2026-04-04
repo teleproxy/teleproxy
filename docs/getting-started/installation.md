@@ -11,7 +11,7 @@ curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh 
 Customize with environment variables:
 
 ```bash
-PORT=8443 EE_DOMAIN=www.google.com curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | PORT=8443 EE_DOMAIN=www.google.com sh
 ```
 
 ### Multiple Secrets
@@ -19,22 +19,23 @@ PORT=8443 EE_DOMAIN=www.google.com curl -sSL https://raw.githubusercontent.com/t
 Auto-generate several secrets at once:
 
 ```bash
-SECRET_COUNT=3 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | SECRET_COUNT=3 sh
 ```
 
 Or pass your own as a comma-separated list:
 
 ```bash
-SECRET=aabbccdd11223344aabbccdd11223344,eeff00112233445566778899aabbccdd \
-  curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | \
+  SECRET=aabbccdd11223344aabbccdd11223344,eeff00112233445566778899aabbccdd sh
 ```
 
 Numbered secrets with labels and per-secret connection limits:
 
 ```bash
-SECRET_1=aabbccdd11223344aabbccdd11223344 SECRET_LABEL_1=family \
-SECRET_2=eeff00112233445566778899aabbccdd SECRET_LABEL_2=work SECRET_LIMIT_2=500 \
-  curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | \
+  SECRET_1=aabbccdd11223344aabbccdd11223344 SECRET_LABEL_1=family \
+  SECRET_2=eeff00112233445566778899aabbccdd SECRET_LABEL_2=work SECRET_LIMIT_2=500 \
+  sh
 ```
 
 Each secret gets its own QR code and connection link at the end of installation. You can also add or remove secrets later by editing the config and reloading:
@@ -56,6 +57,22 @@ To uninstall:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh -s -- --uninstall
+```
+
+## Updating
+
+Re-run the install script to upgrade to the latest version:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | sh
+```
+
+The script replaces the binary and restarts the service. Your existing config (`/etc/teleproxy/config.toml`) — including secrets, ports, and domain settings — is preserved.
+
+To pin a specific version:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | TELEPROXY_VERSION=1.2.3 sh
 ```
 
 ## Static Binary (Any Linux)
