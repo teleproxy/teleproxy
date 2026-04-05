@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.8.0]
+
+DC health probes (#47).
+
+- Periodic TCP handshake probes to all 5 Telegram DCs, exposed as Prometheus histograms (`teleproxy_dc_latency_seconds`), failure counters, and last-latency gauges
+- Disabled by default. Enable with `--dc-probe-interval 30` (CLI), `dc_probe_interval = 30` (TOML), or `DC_PROBE_INTERVAL=30` (Docker env)
+- Probes run in master process only with non-blocking poll for sub-millisecond accuracy
+- Text stats include per-DC latency, average, count, and failure fields
+
 ## [Unreleased]
 
 PROXY protocol v1/v2 listener support.
