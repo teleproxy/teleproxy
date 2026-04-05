@@ -82,20 +82,21 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Clean up old package versions
+    - name: Clean up attestation artifacts
       if: github.event_name != 'pull_request'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Delete all versions tagged only with sha256-* (attestation artifacts)
-        # and all untagged versions (orphaned platform manifests)
+        # Delete versions tagged only with sha256-* (old attestation/provenance
+        # artifacts). Do NOT delete untagged versions — those are the platform
+        # manifests (amd64/arm64) referenced by the multi-arch index.
         gh api --paginate \
           /orgs/teleproxy/packages/container/teleproxy/versions \
           --jq '.[] | select(
-            (.metadata.container.tags | length == 0) or
+            (.metadata.container.tags | length > 0) and
             (.metadata.container.tags | all(startswith("sha256-")))
           ) | .id' | while read -r id; do
-          echo "Deleting version $id"
+          echo "Deleting attestation version $id"
           gh api --method DELETE \
             "/orgs/teleproxy/packages/container/teleproxy/versions/$id" || true
         done
