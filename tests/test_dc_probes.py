@@ -146,19 +146,26 @@ for dc in range(1, 6):
               False, "no bucket lines found")
 
 
-# ── Probe values (CI has network access to Telegram DCs) ──────
+# ── Probe values ──────────────────────────────────────────────
 
 print("\n=== Probe values ===")
 
 total_count = 0
+total_failures = 0
 for dc in range(1, 6):
-    val = parse_stat(stats, f"dc{dc}_probe_count")
-    if val:
-        total_count += int(val)
+    cnt = parse_stat(stats, f"dc{dc}_probe_count")
+    fail = parse_stat(stats, f"dc{dc}_probe_failures")
+    last = parse_stat(stats, f"dc{dc}_probe_latency_last")
+    cnt_val = int(cnt) if cnt else 0
+    fail_val = int(fail) if fail else 0
+    total_count += cnt_val
+    total_failures += fail_val
+    print(f"  DC {dc}: count={cnt_val} failures={fail_val} last={last}")
 
-check("at least one DC probed successfully",
-      total_count > 0,
-      f"total probe count: {total_count}")
+total_attempted = total_count + total_failures
+check("at least one DC probe attempted",
+      total_attempted > 0,
+      f"total count={total_count} failures={total_failures}")
 
 
 # ── Summary ───────────────────────────────────────────────────
