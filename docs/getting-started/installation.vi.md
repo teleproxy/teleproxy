@@ -79,6 +79,28 @@ Script sẽ thay thế binary và khởi động lại dịch vụ. Cấu hình 
 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | TELEPROXY_VERSION=1.2.3 sh
 ```
 
+## Kho RPM (RHEL, Rocky, Alma, Fedora)
+
+Trên RHEL 9, RHEL 10, AlmaLinux, Rocky Linux và Fedora 41/42, hãy cài qua dnf để bản cập nhật đi qua trình quản lý gói:
+
+```bash
+dnf install https://teleproxy.github.io/repo/teleproxy-release-latest.noarch.rpm
+dnf install teleproxy
+systemctl enable --now teleproxy
+```
+
+Lần cài đầu sẽ sinh một secret ngẫu nhiên trong `/etc/teleproxy/config.toml` và thông điệp sau cài đặt sẽ in ra liên kết kết nối. Các lần `dnf upgrade` sau chỉ thay binary và không bao giờ động vào file cấu hình của bạn.
+
+Kho được ký bằng GPG RSA 4096 với SHA-512 (tương thích với rpm-sequoia trên RHEL 9). Gói setup đặt `/etc/yum.repos.d/teleproxy.repo` và khoá công khai vào `/etc/pki/rpm-gpg/`.
+
+Gỡ cài đặt:
+
+```bash
+dnf remove teleproxy
+```
+
+File `/etc/teleproxy/config.toml` được giữ lại để lần cài lại tiếp tục từ chỗ bạn đã dừng.
+
 ## Binary tĩnh (Mọi bản phân phối Linux)
 
 Các binary tĩnh được phát hành cùng với mỗi phiên bản - liên kết tĩnh với musl libc, không cần bất kỳ thư viện phụ thuộc nào. Tải về và chạy ngay.

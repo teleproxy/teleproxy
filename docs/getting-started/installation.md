@@ -79,6 +79,28 @@ To pin a specific version:
 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | TELEPROXY_VERSION=1.2.3 sh
 ```
 
+## RPM Repository (RHEL, Rocky, Alma, Fedora)
+
+For RHEL 9, RHEL 10, AlmaLinux, Rocky Linux and Fedora 41/42, install via dnf so updates flow through the package manager:
+
+```bash
+dnf install https://teleproxy.github.io/repo/teleproxy-release-latest.noarch.rpm
+dnf install teleproxy
+systemctl enable --now teleproxy
+```
+
+The first install generates a random secret in `/etc/teleproxy/config.toml`; the post-install message prints the connection link. Subsequent `dnf upgrade` runs swap the binary and never touch your config.
+
+The repository is signed with an RSA 4096 / SHA-512 GPG key (RHEL 9 rpm-sequoia compatible). The setup RPM drops both `/etc/yum.repos.d/teleproxy.repo` and the public key into `/etc/pki/rpm-gpg/`.
+
+To uninstall:
+
+```bash
+dnf remove teleproxy
+```
+
+Your `/etc/teleproxy/config.toml` is left in place so re-installs pick up where you left off.
+
 ## Static Binary (Any Linux)
 
 Pre-built static binaries are published with every release — statically linked against musl libc, zero runtime dependencies. Download and run.

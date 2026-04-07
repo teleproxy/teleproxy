@@ -79,6 +79,28 @@ curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh 
 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | TELEPROXY_VERSION=1.2.3 sh
 ```
 
+## مخزن RPM (RHEL، Rocky، Alma، Fedora)
+
+برای RHEL 9، RHEL 10، AlmaLinux، Rocky Linux و Fedora 41/42 از طریق dnf نصب کنید تا به‌روزرسانی‌ها از طریق پکیج منیجر انجام شوند:
+
+```bash
+dnf install https://teleproxy.github.io/repo/teleproxy-release-latest.noarch.rpm
+dnf install teleproxy
+systemctl enable --now teleproxy
+```
+
+نصب اول یک secret تصادفی در `/etc/teleproxy/config.toml` می‌سازد و پیام پس از نصب لینک اتصال را چاپ می‌کند. اجراهای بعدی `dnf upgrade` فقط باینری را عوض می‌کنند و هرگز کانفیگ شما را دست نمی‌زنند.
+
+مخزن با کلید GPG از نوع RSA 4096 و SHA-512 امضا شده (سازگار با rpm-sequoia در RHEL 9). پکیج setup هم `/etc/yum.repos.d/teleproxy.repo` و هم کلید عمومی را در `/etc/pki/rpm-gpg/` قرار می‌دهد.
+
+حذف:
+
+```bash
+dnf remove teleproxy
+```
+
+فایل `/etc/teleproxy/config.toml` سر جایش می‌ماند تا نصب مجدد از همان‌جایی که رها کردید ادامه پیدا کند.
+
 ## باینری استاتیک (هر لینوکسی)
 
 باینری‌های استاتیک از پیش ساخته‌شده با هر انتشار منتشر می‌شوند. این باینری‌ها به‌صورت استاتیک با musl libc لینک شده‌اند و هیچ وابستگی اجرایی ندارند. دانلود کنید و اجرا کنید.

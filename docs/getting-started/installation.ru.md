@@ -79,6 +79,28 @@ curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh 
 curl -sSL https://raw.githubusercontent.com/teleproxy/teleproxy/main/install.sh | TELEPROXY_VERSION=1.2.3 sh
 ```
 
+## RPM-репозиторий (RHEL, Rocky, Alma, Fedora)
+
+Для RHEL 9, RHEL 10, AlmaLinux, Rocky Linux и Fedora 41/42 ставьте через dnf — обновления пойдут через пакетный менеджер:
+
+```bash
+dnf install https://teleproxy.github.io/repo/teleproxy-release-latest.noarch.rpm
+dnf install teleproxy
+systemctl enable --now teleproxy
+```
+
+При первой установке генерируется случайный секрет в `/etc/teleproxy/config.toml`, и пост-установочное сообщение печатает ссылку для подключения. Последующие `dnf upgrade` обновляют только бинарник и никогда не трогают ваш конфиг.
+
+Репозиторий подписан ключом RSA 4096 с SHA-512 (совместим с rpm-sequoia в RHEL 9). Setup-пакет кладёт `/etc/yum.repos.d/teleproxy.repo` и публичный ключ в `/etc/pki/rpm-gpg/`.
+
+Удаление:
+
+```bash
+dnf remove teleproxy
+```
+
+Файл `/etc/teleproxy/config.toml` остаётся на месте, чтобы при повторной установке всё подхватилось как было.
+
 ## Готовый бинарник (любой Linux)
 
 Статически собранные бинарники публикуются с каждым релизом — линковка с musl libc, никаких зависимостей. Скачайте и запускайте.
