@@ -81,14 +81,14 @@ extern int workers;
 extern long long direct_dc_connections_created, direct_dc_connections_active;
 extern long long direct_dc_connections_failed, direct_dc_connections_dc_closed;
 extern long long direct_dc_retries;
-extern long long per_secret_connections[16], per_secret_connections_created[16];
-extern long long per_secret_connections_rejected[16];
-extern long long per_secret_bytes_received[16], per_secret_bytes_sent[16];
-extern long long per_secret_rejected_quota[16];
-extern long long per_secret_rejected_ips[16];
-extern long long per_secret_rejected_expired[16];
-extern long long per_secret_unique_ips[16];
-extern long long per_secret_rate_limited[16];
+extern long long per_secret_connections[EXT_SECRET_MAX_SLOTS], per_secret_connections_created[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_connections_rejected[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_bytes_received[EXT_SECRET_MAX_SLOTS], per_secret_bytes_sent[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_quota[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_ips[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_expired[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_unique_ips[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rate_limited[EXT_SECRET_MAX_SLOTS];
 extern long long transport_errors_received;
 
 extern long long quickack_packets_received;
@@ -295,7 +295,7 @@ static int tcp_direct_client_parse_execute (connection_job_t C) {
   }
   int sid = TCP_RPC_DATA(C)->extra_int2;
   long long relay_bytes = c->in.total_bytes;
-  if (sid > 0 && sid <= 16 && relay_bytes > 0) {
+  if (sid > 0 && sid <= EXT_SECRET_MAX_SLOTS && relay_bytes > 0) {
     per_secret_bytes_received[sid - 1] += relay_bytes;
     tcp_rpcs_account_bytes (sid - 1, c->remote_ip, c->remote_ipv6, relay_bytes, 0);
     if (secret_over_quota (sid - 1)) {
@@ -306,7 +306,7 @@ static int tcp_direct_client_parse_execute (connection_job_t C) {
     }
   }
   int res = tcp_direct_relay (C);
-  if (sid > 0 && sid <= 16 && relay_bytes > 0) {
+  if (sid > 0 && sid <= EXT_SECRET_MAX_SLOTS && relay_bytes > 0) {
     rate_limit_after_relay (C, sid - 1, relay_bytes, c->remote_ip, c->remote_ipv6);
   }
   return res;
@@ -350,7 +350,7 @@ static int tcp_direct_dc_parse_execute (connection_job_t C) {
   if (c->extra && c->in.total_bytes > 0) {
     connection_job_t client = (connection_job_t) c->extra;
     int sid = TCP_RPC_DATA(client)->extra_int2;
-    if (sid > 0 && sid <= 16) {
+    if (sid > 0 && sid <= EXT_SECRET_MAX_SLOTS) {
       relay_bytes = c->in.total_bytes;
       per_secret_bytes_sent[sid - 1] += relay_bytes;
       tcp_rpcs_account_bytes (sid - 1, CONN_INFO(client)->remote_ip,
@@ -406,7 +406,7 @@ static int tcp_direct_close (connection_job_t C, int who) {
   if (is_client && direct_dc_connections_active > 0) {
     direct_dc_connections_active--;
     int sid = TCP_RPC_DATA(C)->extra_int2;
-    if (sid > 0 && sid <= 16) {
+    if (sid > 0 && sid <= EXT_SECRET_MAX_SLOTS) {
       per_secret_connections[sid - 1]--;
       ip_track_disconnect_impl (sid - 1, c->remote_ip, c->remote_ipv6);
       tcp_rpcs_account_disconnect (sid - 1, c->remote_ip, c->remote_ipv6);

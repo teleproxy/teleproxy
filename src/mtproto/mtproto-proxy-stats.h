@@ -60,22 +60,24 @@ struct worker_stats {
   long long transport_errors_received;
   long long quickack_packets_received;
 
-  long long per_secret_connections[16];
-  long long per_secret_connections_created[16];
-  long long per_secret_connections_rejected[16];
-  long long per_secret_bytes_received[16];
-  long long per_secret_bytes_sent[16];
-  long long per_secret_rejected_quota[16];
-  long long per_secret_rejected_ips[16];
-  long long per_secret_rejected_expired[16];
-  long long per_secret_unique_ips[16];
-  long long per_secret_rate_limited[16];
+  long long per_secret_connections[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_connections_created[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_connections_rejected[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_bytes_received[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_bytes_sent[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_rejected_quota[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_rejected_ips[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_rejected_expired[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_unique_ips[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_rate_limited[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_rejected_draining[EXT_SECRET_MAX_SLOTS];
+  long long per_secret_drain_forced[EXT_SECRET_MAX_SLOTS];
 
   /* Per-IP top-N snapshot (issue #46).  Populated each refresh from the
      worker-local ip_volume table.  Master merges across workers in the
      Prometheus renderer.  Empty when top_ips_per_secret is 0. */
-  struct worker_top_ip top_ips[16][WORKER_TOP_IPS_MAX];
-  int top_ips_count[16];
+  struct worker_top_ip top_ips[EXT_SECRET_MAX_SLOTS][WORKER_TOP_IPS_MAX];
+  int top_ips_count[EXT_SECRET_MAX_SLOTS];
 };
 
 extern struct worker_stats *WStats, SumStats;

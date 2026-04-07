@@ -173,29 +173,36 @@ extern int workers;
 extern long long direct_dc_connections_created, direct_dc_connections_active;
 extern long long direct_dc_connections_failed, direct_dc_connections_dc_closed;
 extern long long direct_dc_retries;
-extern long long per_secret_connections[16], per_secret_connections_created[16];
-extern long long per_secret_connections_rejected[16];
-extern long long per_secret_bytes_received[16], per_secret_bytes_sent[16];
-extern long long per_secret_rejected_quota[16];
-extern long long per_secret_rejected_ips[16];
-extern long long per_secret_rejected_expired[16];
-extern long long per_secret_unique_ips[16];
-extern long long per_secret_rate_limited[16];
+extern long long per_secret_connections[EXT_SECRET_MAX_SLOTS], per_secret_connections_created[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_connections_rejected[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_bytes_received[EXT_SECRET_MAX_SLOTS], per_secret_bytes_sent[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_quota[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_ips[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_expired[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_unique_ips[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rate_limited[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_rejected_draining[EXT_SECRET_MAX_SLOTS];
+extern long long per_secret_drain_forced[EXT_SECRET_MAX_SLOTS];
 extern long long transport_errors_received;
 extern long long quickack_packets_received;
 
 int tcp_rpcs_default_execute (connection_job_t c, int op, struct raw_message *msg);
 
-static unsigned char ext_secret[16][16];
-static int ext_secret_cnt = 0;
-static int ext_secret_pinned = 0;  /* CLI -S secrets that survive SIGHUP reload */
+/* Secret state shared with net-tcp-rpc-ext-drain.c.  Engine thread owns
+   all writes; the stats reader thread synchronizes via the existing
+   __sync_synchronize barrier discipline around ext_secret_cnt. */
+unsigned char ext_secret[EXT_SECRET_MAX_SLOTS][16];
+int ext_secret_cnt = 0;
+int ext_secret_pinned = 0;  /* CLI -S secrets that survive SIGHUP reload */
+char ext_secret_label[EXT_SECRET_MAX_SLOTS][EXT_SECRET_LABEL_MAX + 1];
+int ext_secret_limit[EXT_SECRET_MAX_SLOTS];  /* 0 = unlimited */
+long long ext_secret_quota[EXT_SECRET_MAX_SLOTS];   /* byte quota, rx+tx (0 = unlimited) */
+long long ext_secret_rate_limit[EXT_SECRET_MAX_SLOTS]; /* bytes/sec per IP (0 = unlimited) */
+int ext_secret_max_ips[EXT_SECRET_MAX_SLOTS];       /* unique IP limit (0 = unlimited) */
+int64_t ext_secret_expires[EXT_SECRET_MAX_SLOTS];   /* Unix timestamp (0 = never) */
+int ext_secret_state[EXT_SECRET_MAX_SLOTS];          /* SLOT_FREE / SLOT_ACTIVE / SLOT_DRAINING */
+double ext_secret_drain_started_at[EXT_SECRET_MAX_SLOTS]; /* precise_now snapshot */
 static int ext_rand_pad_only = 0;
-static char ext_secret_label[16][EXT_SECRET_LABEL_MAX + 1];
-static int ext_secret_limit[16];  /* 0 = unlimited */
-static long long ext_secret_quota[16];   /* byte quota, rx+tx (0 = unlimited) */
-static long long ext_secret_rate_limit[16]; /* bytes/sec per IP (0 = unlimited) */
-static int ext_secret_max_ips[16];       /* unique IP limit (0 = unlimited) */
-static int64_t ext_secret_expires[16];   /* Unix timestamp (0 = never) */
 
 /* Per-secret IP tracking for unique-IP limits */
 #define SECRET_MAX_TRACKED_IPS 256
@@ -208,8 +215,8 @@ struct tracked_ip {
   double last_refill_time;  /* precise_now at last token refill */
 };
 
-static struct tracked_ip per_secret_ips[16][SECRET_MAX_TRACKED_IPS];
-static int per_secret_unique_ip_count[16];
+static struct tracked_ip per_secret_ips[EXT_SECRET_MAX_SLOTS][SECRET_MAX_TRACKED_IPS];
+static int per_secret_unique_ip_count[EXT_SECRET_MAX_SLOTS];
 
 /* Per-IP volume tracking for top-N metrics lives in net-tcp-rpc-ext-top-ips.c
    (issue #46).  Kept separate to preserve responsibility boundaries and to
@@ -218,7 +225,7 @@ static int per_secret_unique_ip_count[16];
 void tcp_rpcs_set_ext_secret (unsigned char secret[16], const char *label,
                               int limit, long long quota, long long rate_limit,
                               int max_ips, int64_t expires) {
-  assert (ext_secret_cnt < 16);
+  assert (ext_secret_cnt < EXT_SECRET_MAX_ACTIVE);
   int idx = ext_secret_cnt++;
   memcpy (ext_secret[idx], secret, 16);
   if (label && label[0]) {
@@ -231,6 +238,8 @@ void tcp_rpcs_set_ext_secret (unsigned char secret[16], const char *label,
   ext_secret_rate_limit[idx] = rate_limit;
   ext_secret_max_ips[idx] = max_ips;
   ext_secret_expires[idx] = expires;
+  ext_secret_state[idx] = SLOT_ACTIVE;
+  ext_secret_drain_started_at[idx] = 0;
   memset (per_secret_ips[idx], 0, sizeof (per_secret_ips[idx]));
   per_secret_unique_ip_count[idx] = 0;
 
@@ -394,6 +403,14 @@ void tcp_rpcs_ip_track_disconnect (int secret_id, unsigned ip, const unsigned ch
   ip_track_disconnect_impl (secret_id, ip, ipv6);
 }
 
+/* Wipe the IP-tracking table for a slot.  Used by the drain helpers in
+   net-tcp-rpc-ext-drain.c, which can't see the private struct tracked_ip. */
+void tcp_rpcs_ip_track_clear_slot (int secret_id) {
+  if (secret_id < 0 || secret_id >= EXT_SECRET_MAX_SLOTS) { return; }
+  memset (per_secret_ips[secret_id], 0, sizeof (per_secret_ips[secret_id]));
+  per_secret_unique_ip_count[secret_id] = 0;
+}
+
 /*
  *  Per-IP rate limiting (token bucket)
  */
@@ -476,55 +493,10 @@ void tcp_rpcs_set_ext_rand_pad_only(int set) {
   ext_rand_pad_only = set;
 }
 
-void tcp_rpcs_pin_ext_secrets (void) {
-  ext_secret_pinned = ext_secret_cnt;
-}
-
-int tcp_rpcs_reload_ext_secrets (const unsigned char secrets[][16],
-                                const char labels[][EXT_SECRET_LABEL_MAX + 1],
-                                const int *limits, const long long *quotas,
-                                const long long *rate_limits,
-                                const int *max_ips_arr, const int64_t *expires_arr,
-                                int count) {
-  int total = ext_secret_pinned + count;
-  if (total > 16) {
-    vkprintf (0, "secret reload: too many secrets (%d pinned + %d from config = %d, max 16)\n",
-              ext_secret_pinned, count, total);
-    return -1;
-  }
-
-  /* Write new config secrets after pinned ones */
-  for (int i = 0; i < count; i++) {
-    int idx = ext_secret_pinned + i;
-    memcpy (ext_secret[idx], secrets[i], 16);
-    if (labels[i][0]) {
-      snprintf (ext_secret_label[idx], sizeof (ext_secret_label[idx]), "%s", labels[i]);
-    } else {
-      snprintf (ext_secret_label[idx], sizeof (ext_secret_label[idx]), "secret_%d", idx);
-    }
-    ext_secret_limit[idx] = limits[i];
-    ext_secret_quota[idx] = quotas ? quotas[i] : 0;
-    ext_secret_rate_limit[idx] = rate_limits ? rate_limits[i] : 0;
-    ext_secret_max_ips[idx] = max_ips_arr ? max_ips_arr[i] : 0;
-    ext_secret_expires[idx] = expires_arr ? expires_arr[i] : 0;
-  }
-
-  /* Write barrier before updating count */
-  __sync_synchronize ();
-  ext_secret_cnt = total;
-
-  /* Zero connection counters and IP tracking for reloaded slots.
-     Byte counters are NOT reset — quota is cumulative since startup. */
-  for (int i = ext_secret_pinned; i < total; i++) {
-    per_secret_connections[i] = 0;
-    memset (per_secret_ips[i], 0, sizeof (per_secret_ips[i]));
-    per_secret_unique_ip_count[i] = 0;
-  }
-
-  vkprintf (0, "secret reload: %d pinned + %d from config = %d total\n",
-            ext_secret_pinned, count, total);
-  return 0;
-}
+/* tcp_rpcs_pin_ext_secrets, tcp_rpcs_reload_ext_secrets and the
+   tcp_rpcs_drain_* helpers live in net-tcp-rpc-ext-drain.c — they need
+   shared write access to the ext_secret_* state defined above and were
+   moved out to keep this file under the LLM-friendly file-size cap. */
 
 static int allow_only_tls;
 
@@ -1588,6 +1560,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
         unsigned char expected_random[32];
         int secret_id;
         for (secret_id = 0; secret_id < ext_secret_cnt; secret_id++) {
+          if (ext_secret_state[secret_id] == SLOT_FREE) { continue; }
           sha256_hmac (ext_secret[secret_id], 16, client_hello, len, expected_random);
           if (CRYPTO_memcmp (expected_random, client_random, 28) == 0) {
             break;
@@ -1602,8 +1575,20 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
           RETURN_TLS_ERROR(info);
         }
 
-        D->extra_int2 = secret_id + 1;
+        /* Don't set D->extra_int2 here.  The per-secret connection counter
+           is only incremented in the obfs2 parser block below (after the TLS
+           handshake completes and the client sends the encrypted obfs2 init).
+           Setting extra_int2 too early would cause spurious counter
+           decrements in the close handler if the connection dies between
+           the TLS handshake and obfs2 init.  Local secret_id is sufficient
+           for the rejection checks and HMAC computation below. */
         vkprintf (1, "TLS handshake matched secret [%s] from %s:%d\n", ext_secret_label[secret_id], show_remote_ip (C), c->remote_port);
+
+        if (ext_secret_state[secret_id] == SLOT_DRAINING) {
+          per_secret_rejected_draining[secret_id]++;
+          vkprintf (1, "TLS connection rejected: secret [%s] draining from %s:%d\n", ext_secret_label[secret_id], show_remote_ip (C), c->remote_port);
+          RETURN_TLS_ERROR(info);
+        }
 
         if (secret_expired (secret_id)) {
           per_secret_rejected_expired[secret_id]++;
@@ -1736,14 +1721,28 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
       unsigned char random_header_ct[64];
       memcpy (random_header_ct, random_header, 64);
 
+      /* Compact non-FREE slots into a temporary array so the parser sees a
+         contiguous list, then translate the matched index back to the real
+         slot id.  Without this, FREE slots in the middle (caused by reload
+         draining) would cause a wasted HMAC against zeroed key bytes. */
+      unsigned char compact_secrets[EXT_SECRET_MAX_SLOTS][16];
+      int compact_to_slot[EXT_SECRET_MAX_SLOTS];
+      int compact_n = 0;
+      for (int s = 0; s < ext_secret_cnt; s++) {
+        if (ext_secret_state[s] == SLOT_FREE) { continue; }
+        memcpy (compact_secrets[compact_n], ext_secret[s], 16);
+        compact_to_slot[compact_n] = s;
+        compact_n++;
+      }
+
       struct obfs2_parse_result pr;
       int ok = (obfs2_parse_header (random_header,
-                  ext_secret_cnt > 0 ? (const unsigned char (*)[16])ext_secret : NULL,
-                  ext_secret_cnt, ext_rand_pad_only, &pr) == 0);
+                  compact_n > 0 ? (const unsigned char (*)[16])compact_secrets : NULL,
+                  compact_n, ext_rand_pad_only, &pr) == 0);
 
       if (ok) {
           unsigned tag = pr.tag;
-          int secret_id = pr.secret_id;
+          int secret_id = compact_to_slot[pr.secret_id];
 
           if (tag != OBFS2_TAG_PAD && allow_only_tls) {
             vkprintf (1, "Expected random padding mode\n");
@@ -1783,7 +1782,14 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
         /* Per-secret checks (non-TLS; TLS checks happen during handshake above) */
         if (!(c->flags & C_IS_TLS)) {
           int _sid = D->extra_int2;
-          if (_sid > 0 && _sid <= 16) {
+          if (_sid > 0 && _sid <= EXT_SECRET_MAX_SLOTS) {
+            if (ext_secret_state[_sid - 1] == SLOT_DRAINING) {
+              per_secret_rejected_draining[_sid - 1]++;
+              vkprintf (1, "connection rejected: secret [%s] draining from %s:%d\n", ext_secret_label[_sid - 1], show_remote_ip (C), c->remote_port);
+              D->extra_int2 = 0;
+              fail_connection (C, -1);
+              return 0;
+            }
             if (secret_expired (_sid - 1)) {
               per_secret_rejected_expired[_sid - 1]++;
               vkprintf (1, "connection rejected: secret [%s] expired from %s:%d\n", ext_secret_label[_sid - 1], show_remote_ip (C), c->remote_port);
@@ -1820,7 +1826,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
            or tcp_direct_close (direct success). */
         {
           int _sid = D->extra_int2;
-          if (_sid > 0 && _sid <= 16) {
+          if (_sid > 0 && _sid <= EXT_SECRET_MAX_SLOTS) {
             per_secret_connections[_sid - 1]++;
             per_secret_connections_created[_sid - 1]++;
             ip_track_connect (_sid - 1, c->remote_ip, c->remote_ipv6);

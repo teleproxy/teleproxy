@@ -70,6 +70,7 @@
 #include "common/tl-parse.h"
 #include "engine/engine.h"
 #include "engine/engine-net.h"
+#include "jobs/jobs.h"
 #include "net/net-ip-acl.h"
 #include "net/net-tcp-drs.h"
 #include "common/toml-config.h"
@@ -208,14 +209,16 @@ struct ext_connection_ref {
 };
 
 long long ext_connections, ext_connections_created;
-long long per_secret_connections[16], per_secret_connections_created[16];
-long long per_secret_connections_rejected[16];
-long long per_secret_bytes_received[16], per_secret_bytes_sent[16];
-long long per_secret_rejected_quota[16];
-long long per_secret_rejected_ips[16];
-long long per_secret_rejected_expired[16];
-long long per_secret_unique_ips[16];
-long long per_secret_rate_limited[16];
+long long per_secret_connections[EXT_SECRET_MAX_SLOTS], per_secret_connections_created[EXT_SECRET_MAX_SLOTS];
+long long per_secret_connections_rejected[EXT_SECRET_MAX_SLOTS];
+long long per_secret_bytes_received[EXT_SECRET_MAX_SLOTS], per_secret_bytes_sent[EXT_SECRET_MAX_SLOTS];
+long long per_secret_rejected_quota[EXT_SECRET_MAX_SLOTS];
+long long per_secret_rejected_ips[EXT_SECRET_MAX_SLOTS];
+long long per_secret_rejected_expired[EXT_SECRET_MAX_SLOTS];
+long long per_secret_unique_ips[EXT_SECRET_MAX_SLOTS];
+long long per_secret_rate_limited[EXT_SECRET_MAX_SLOTS];
+long long per_secret_rejected_draining[EXT_SECRET_MAX_SLOTS];
+long long per_secret_drain_forced[EXT_SECRET_MAX_SLOTS];
 
 struct ext_connection_ref OutExtConnections[EXT_CONN_TABLE_SIZE];
 struct ext_connection *InExtConnectionHash[EXT_CONN_HASH_SIZE];
@@ -1174,6 +1177,26 @@ struct toml_config toml_cfg;
 /* Link page generation is in mtproto-proxy-stats.c */
 
 
+/* Periodic sweeper that finishes draining secret slots — releases ones with
+   no remaining connections, or force-closes stragglers past the timeout. */
+static double drain_sweep_gw (void *unused) {
+  int pinned = tcp_rpcs_get_ext_secret_pinned ();
+  int cnt = tcp_rpcs_get_ext_secret_count ();
+  double timeout = tcp_rpcs_drain_get_timeout ();
+  for (int s = pinned; s < cnt; s++) {
+    if (tcp_rpcs_get_ext_secret_state (s) != SLOT_DRAINING) { continue; }
+    if (per_secret_connections[s] == 0) {
+      tcp_rpcs_drain_release_slot_if_empty (s);
+      continue;
+    }
+    if (timeout > 0 &&
+        precise_now - tcp_rpcs_get_ext_secret_drain_started (s) >= timeout) {
+      tcp_rpcs_drain_force_close_for_slot (s);
+    }
+  }
+  return precise_now + 1.0;
+}
+
 void mtfront_pre_loop (void) {
   int i, enable_ipv6 = (ipv6_enabled && !engine_state->settings_addr.s_addr) ? SM_IPV6 : 0;
   if (domain_count == 0) {
@@ -1211,6 +1234,13 @@ void mtfront_pre_loop (void) {
       vkprintf (0, "DC probes: interval %d seconds\n", probe_iv);
     }
   }
+
+  /* Drain sweeper — runs at 1 Hz on the engine thread, finishes releasing
+     slots that lost their last connection and force-closes stragglers past
+     drain_timeout_secs.  Each worker has its own sweeper since secret state
+     is per-worker. */
+  job_t drain_job = job_timer_alloc (JC_MAIN, drain_sweep_gw, NULL);
+  job_timer_insert (drain_job, 1.0);
 }
 
 void precise_cron (void) {
@@ -1251,6 +1281,7 @@ static void apply_toml_secrets (struct toml_config *cfg) {
   }
 
   tcp_rpcs_reload_ext_secrets (keys, labels, limits, quotas, rate_limits, max_ips, expires, cfg->secret_count);
+  tcp_rpcs_drain_set_timeout ((double) cfg->drain_timeout_secs);
 }
 
 static void mtfront_sighup_handler (void) {
@@ -1707,6 +1738,7 @@ void mtfront_pre_init (void) {
 
   if (toml_config_path) {
     tcp_rpcs_set_top_ips_per_secret (toml_cfg.top_ips_per_secret);
+    tcp_rpcs_drain_set_timeout ((double) toml_cfg.drain_timeout_secs);
   }
 
   if (domain_count) {

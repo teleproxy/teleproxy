@@ -222,6 +222,50 @@ Metrics:
 - **Stats:** `secret_temp_expires 1751327999`, `secret_temp_rejected_expired 12`
 - **Prometheus:** `teleproxy_secret_expires_timestamp{secret="temp"} 1751327999`
 
+## Graceful Draining on Removal
+
+When a secret is removed from the TOML and you `kill -HUP` the proxy, in-flight
+connections that authenticated under that secret keep working — the slot
+transitions to a draining state, new connections matching the removed secret
+are rejected, and the slot is released only after all existing connections
+have closed (or after `drain_timeout_secs` seconds, whichever comes first).
+This enables zero-downtime secret rotation without dropping users mid-session.
+
+TOML config:
+
+```toml
+drain_timeout_secs = 300   # 0 = infinite (never force-close), default 300
+```
+
+Workflow for rotating a secret without dropping users:
+
+1. Add the new secret to `config.toml` alongside the old one.
+2. `kill -HUP $(pidof teleproxy)` — both secrets are now active.
+3. Update clients to the new secret at your own pace.
+4. Remove the old secret from `config.toml`.
+5. `kill -HUP` again — old secret enters draining state, new connections
+   matching it are rejected, in-flight ones keep going until they close.
+6. After all clients have migrated (or `drain_timeout_secs` elapses), the
+   slot is released and metrics for it disappear.
+
+Re-adding a draining secret before the timeout revives it — the same slot,
+counters, and IP tracking carry over.  Pinned `-S` CLI secrets are immutable
+across SIGHUP and never drain.
+
+Metrics for a draining secret:
+
+- **Stats:** `secret_<label>_draining 1`, `secret_<label>_drain_age_seconds`,
+  `secret_<label>_rejected_draining`, `secret_<label>_drain_forced`
+- **Prometheus:** `teleproxy_secret_draining{secret="..."}`,
+  `teleproxy_secret_drain_age_seconds{secret="..."}`,
+  `teleproxy_secret_rejected_draining_total{secret="..."}`,
+  `teleproxy_secret_drain_forced_total{secret="..."}`
+
+Capacity: at most 16 active secrets at any moment, plus up to 16 additional
+draining slots.  Rotating all 16 secrets twice in quick succession before the
+first batch finishes draining will fail the second reload — wait for drain to
+complete or set a smaller `drain_timeout_secs` to reclaim slots faster.
+
 ## Per-IP Top-N Metrics
 
 Surface the heaviest client IPs per secret in `/metrics` to diagnose rogue clients. Disabled by default — opt in with a top-level config knob, not a per-secret one (cardinality is an operator concern).

@@ -84,6 +84,9 @@ jobs:
     - name: Run Config Reload Tests
       run: make test-config-reload
 
+    - name: Run Secret Drain Tests
+      run: make test-secret-drain
+
     - name: Run DRS Delays Tests
       run: make test-drs-delays
 

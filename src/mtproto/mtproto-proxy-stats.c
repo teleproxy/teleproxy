@@ -58,6 +58,8 @@ extern long long per_secret_rejected_ips[];
 extern long long per_secret_rejected_expired[];
 extern long long per_secret_unique_ips[];
 extern long long per_secret_rate_limited[];
+extern long long per_secret_rejected_draining[];
+extern long long per_secret_drain_forced[];
 extern long long connections_failed_lru, connections_failed_flood;
 
 struct worker_stats *WStats, SumStats;
@@ -192,7 +194,7 @@ static void update_local_stats_copy (struct worker_stats *S) {
   UPD (drs_delays_skipped);
   UPD (transport_errors_received);
   UPD (quickack_packets_received);
-  { int _i; for (_i = 0; _i < 16; _i++) {
+  { int _i; for (_i = 0; _i < EXT_SECRET_MAX_SLOTS; _i++) {
     UPD (per_secret_connections[_i]);
     UPD (per_secret_connections_created[_i]);
     UPD (per_secret_connections_rejected[_i]);
@@ -203,6 +205,8 @@ static void update_local_stats_copy (struct worker_stats *S) {
     UPD (per_secret_rejected_expired[_i]);
     UPD (per_secret_unique_ips[_i]);
     UPD (per_secret_rate_limited[_i]);
+    UPD (per_secret_rejected_draining[_i]);
+    UPD (per_secret_drain_forced[_i]);
     tcp_rpcs_snapshot_top_ips (_i, S->top_ips[_i], &S->top_ips_count[_i], WORKER_TOP_IPS_MAX);
   }}
 #undef UPD
@@ -291,7 +295,7 @@ static inline void add_stats (struct worker_stats *W) {
   UPD (drs_delays_skipped);
   UPD (transport_errors_received);
   UPD (quickack_packets_received);
-  { int _i; for (_i = 0; _i < 16; _i++) {
+  { int _i; for (_i = 0; _i < EXT_SECRET_MAX_SLOTS; _i++) {
     UPD (per_secret_connections[_i]);
     UPD (per_secret_connections_created[_i]);
     UPD (per_secret_connections_rejected[_i]);
@@ -302,6 +306,8 @@ static inline void add_stats (struct worker_stats *W) {
     UPD (per_secret_rejected_expired[_i]);
     UPD (per_secret_unique_ips[_i]);
     UPD (per_secret_rate_limited[_i]);
+    UPD (per_secret_rejected_draining[_i]);
+    UPD (per_secret_drain_forced[_i]);
   }}
 #undef UPD
 }
@@ -564,6 +570,8 @@ void mtfront_prepare_stats (stats_buffer_t *sb) {
   { int _sc = tcp_rpcs_get_ext_secret_count();
     int _i;
     for (_i = 0; _i < _sc; _i++) {
+      int _state = tcp_rpcs_get_ext_secret_state (_i);
+      if (_state == SLOT_FREE) { continue; }
       const char *_lbl = tcp_rpcs_get_ext_secret_label (_i);
       sb_printf (sb,
 	       "secret_%s_connections\t%lld\n"
@@ -603,6 +611,15 @@ void mtfront_prepare_stats (stats_buffer_t *sb) {
         sb_printf (sb, "secret_%s_rate_limit\t%lld\n", _lbl, _rl);
       }
       sb_printf (sb, "secret_%s_rate_limited\t%lld\n", _lbl, S(per_secret_rate_limited[_i]));
+      sb_printf (sb, "secret_%s_draining\t%d\n", _lbl, _state == SLOT_DRAINING ? 1 : 0);
+      sb_printf (sb, "secret_%s_rejected_draining\t%lld\n", _lbl, S(per_secret_rejected_draining[_i]));
+      sb_printf (sb, "secret_%s_drain_forced\t%lld\n", _lbl, S(per_secret_drain_forced[_i]));
+      if (_state == SLOT_DRAINING) {
+        double _started = tcp_rpcs_get_ext_secret_drain_started (_i);
+        if (_started > 0) {
+          sb_printf (sb, "secret_%s_drain_age_seconds\t%.0f\n", _lbl, precise_now - _started);
+        }
+      }
     }
   }
   dc_probes_write_text_stats (sb);
@@ -828,114 +845,148 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
       sb_printf (sb,
 	       "# HELP teleproxy_secret_connections Current connections per configured secret.\n"
 	       "# TYPE teleproxy_secret_connections gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_connections{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_connections_created_total Total connections per configured secret.\n"
 	       "# TYPE teleproxy_secret_connections_created_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_connections_created_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections_created[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_connection_limit Configured connection limit per secret (0=unlimited).\n"
 	       "# TYPE teleproxy_secret_connection_limit gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_connection_limit{secret=\"%s\"} %d\n",
 	         tcp_rpcs_get_ext_secret_label (_i), tcp_rpcs_get_ext_secret_limit (_i));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_connections_rejected_total Connections rejected due to per-secret limit.\n"
 	       "# TYPE teleproxy_secret_connections_rejected_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_connections_rejected_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_connections_rejected[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_bytes_received_total Bytes received from clients per secret.\n"
 	       "# TYPE teleproxy_secret_bytes_received_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_bytes_received_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_bytes_received[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_bytes_sent_total Bytes sent to clients per secret.\n"
 	       "# TYPE teleproxy_secret_bytes_sent_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_bytes_sent_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_bytes_sent[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_bytes_total Total bytes transferred (rx+tx) per secret.\n"
 	       "# TYPE teleproxy_secret_bytes_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_bytes_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_bytes_received[_i]) + S(per_secret_bytes_sent[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_quota_bytes Configured byte quota per secret (0=unlimited).\n"
 	       "# TYPE teleproxy_secret_quota_bytes gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_quota_bytes{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), tcp_rpcs_get_ext_secret_quota (_i));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_max_ips Configured unique IP limit per secret (0=unlimited).\n"
 	       "# TYPE teleproxy_secret_max_ips gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_max_ips{secret=\"%s\"} %d\n",
 	         tcp_rpcs_get_ext_secret_label (_i), tcp_rpcs_get_ext_secret_max_ips (_i));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_unique_ips Current unique IPs connected per secret.\n"
 	       "# TYPE teleproxy_secret_unique_ips gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_unique_ips{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_unique_ips[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_expires_timestamp Expiration Unix timestamp per secret (0=never).\n"
 	       "# TYPE teleproxy_secret_expires_timestamp gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_expires_timestamp{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), (long long) tcp_rpcs_get_ext_secret_expires (_i));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_rejected_quota_total Connections rejected due to byte quota.\n"
 	       "# TYPE teleproxy_secret_rejected_quota_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_rejected_quota_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_rejected_quota[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_rejected_ips_total Connections rejected due to unique IP limit.\n"
 	       "# TYPE teleproxy_secret_rejected_ips_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_rejected_ips_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_rejected_ips[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_rejected_expired_total Connections rejected due to secret expiration.\n"
 	       "# TYPE teleproxy_secret_rejected_expired_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_rejected_expired_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_rejected_expired[_i]));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_rate_limit_bytes Configured per-IP rate limit in bytes/sec (0=unlimited).\n"
 	       "# TYPE teleproxy_secret_rate_limit_bytes gauge\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_rate_limit_bytes{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), tcp_rpcs_get_ext_secret_rate_limit (_i));
       }
       sb_printf (sb,
 	       "# HELP teleproxy_secret_rate_limited_total Times per-IP rate limiting was applied.\n"
 	       "# TYPE teleproxy_secret_rate_limited_total counter\n");
-      for (_i = 0; _i < _sc; _i++) {
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
         sb_printf (sb, "teleproxy_secret_rate_limited_total{secret=\"%s\"} %lld\n",
 	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_rate_limited[_i]));
+      }
+      sb_printf (sb,
+	       "# HELP teleproxy_secret_draining 1 if the secret is draining after SIGHUP removal.\n"
+	       "# TYPE teleproxy_secret_draining gauge\n");
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
+        sb_printf (sb, "teleproxy_secret_draining{secret=\"%s\"} %d\n",
+	         tcp_rpcs_get_ext_secret_label (_i),
+	         tcp_rpcs_get_ext_secret_state (_i) == SLOT_DRAINING ? 1 : 0);
+      }
+      sb_printf (sb,
+	       "# HELP teleproxy_secret_drain_age_seconds Seconds since the secret entered draining state.\n"
+	       "# TYPE teleproxy_secret_drain_age_seconds gauge\n");
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
+        double _age = 0;
+        if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_DRAINING) {
+          double _started = tcp_rpcs_get_ext_secret_drain_started (_i);
+          if (_started > 0) { _age = precise_now - _started; }
+        }
+        sb_printf (sb, "teleproxy_secret_drain_age_seconds{secret=\"%s\"} %.0f\n",
+	         tcp_rpcs_get_ext_secret_label (_i), _age);
+      }
+      sb_printf (sb,
+	       "# HELP teleproxy_secret_rejected_draining_total Connections rejected because the secret is draining.\n"
+	       "# TYPE teleproxy_secret_rejected_draining_total counter\n");
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
+        sb_printf (sb, "teleproxy_secret_rejected_draining_total{secret=\"%s\"} %lld\n",
+	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_rejected_draining[_i]));
+      }
+      sb_printf (sb,
+	       "# HELP teleproxy_secret_drain_forced_total Connections force-closed when the drain timeout expired.\n"
+	       "# TYPE teleproxy_secret_drain_forced_total counter\n");
+      for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
+        sb_printf (sb, "teleproxy_secret_drain_forced_total{secret=\"%s\"} %lld\n",
+	         tcp_rpcs_get_ext_secret_label (_i), S(per_secret_drain_forced[_i]));
       }
 
       /* Per-IP top-N metrics (issue #46).  Emitted only when the operator
@@ -947,7 +998,7 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
         sb_printf (sb,
 	       "# HELP teleproxy_secret_ip_connections Active connections per client IP (top N per secret by traffic).\n"
 	       "# TYPE teleproxy_secret_ip_connections gauge\n");
-        for (_i = 0; _i < _sc; _i++) {
+        for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
           int n = MasterTopIpsCount[_i];
           if (n <= 0) { continue; }
           qsort (MasterTopIps[_i], n, sizeof (MasterTopIps[_i][0]), top_ip_cmp_desc);
@@ -968,7 +1019,7 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
         sb_printf (sb,
 	       "# HELP teleproxy_secret_ip_bytes_received_total Bytes received from client IP (top N per secret by traffic).\n"
 	       "# TYPE teleproxy_secret_ip_bytes_received_total counter\n");
-        for (_i = 0; _i < _sc; _i++) {
+        for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
           int n = MasterTopIpsCount[_i];
           if (n <= 0) { continue; }
           if (n > _top_n) { n = _top_n; }
@@ -988,7 +1039,7 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
         sb_printf (sb,
 	       "# HELP teleproxy_secret_ip_bytes_sent_total Bytes sent to client IP (top N per secret by traffic).\n"
 	       "# TYPE teleproxy_secret_ip_bytes_sent_total counter\n");
-        for (_i = 0; _i < _sc; _i++) {
+        for (_i = 0; _i < _sc; _i++) { if (tcp_rpcs_get_ext_secret_state (_i) == SLOT_FREE) { continue; }
           int n = MasterTopIpsCount[_i];
           if (n <= 0) { continue; }
           if (n > _top_n) { n = _top_n; }

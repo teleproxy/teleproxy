@@ -418,6 +418,14 @@ int toml_config_load (const char *path, struct toml_config *cfg,
   /* DC probes */
   cfg->dc_probe_interval = get_optional_int (top, "dc_probe_interval", -1);
 
+  /* Graceful secret draining */
+  cfg->drain_timeout_secs = get_optional_int (top, "drain_timeout_secs", 300);
+  if (cfg->drain_timeout_secs < 0) {
+    snprintf (errbuf, errlen, "drain_timeout_secs must be >= 0 (0 = infinite)");
+    toml_free (res);
+    return -1;
+  }
+
   /* SOCKS5 upstream proxy */
   get_optional_string (top, "socks5", cfg->socks5, sizeof (cfg->socks5));
 
@@ -495,6 +503,8 @@ int toml_config_reload (const char *path, struct toml_config *cfg) {
 
   snprintf (cfg->ip_blocklist, sizeof (cfg->ip_blocklist), "%s", new_cfg.ip_blocklist);
   snprintf (cfg->ip_allowlist, sizeof (cfg->ip_allowlist), "%s", new_cfg.ip_allowlist);
+
+  cfg->drain_timeout_secs = new_cfg.drain_timeout_secs;
 
   kprintf ("config reloaded: %d secret(s)\n", cfg->secret_count);
   return 0;

@@ -134,7 +134,7 @@ int mtproto_ext_rpc_close (connection_job_t C, int who) {
   assert ((unsigned) CONN_INFO(C)->fd < MAX_CONNECTIONS);
   vkprintf (3, "ext_rpc connection closing (%d) by %d\n", CONN_INFO(C)->fd, who);
   int sid = TCP_RPC_DATA(C)->extra_int2;
-  if (sid > 0 && sid <= 16) {
+  if (sid > 0 && sid <= EXT_SECRET_MAX_SLOTS) {
     per_secret_connections[sid - 1]--;
     tcp_rpcs_ip_track_disconnect (sid - 1, CONN_INFO(C)->remote_ip, CONN_INFO(C)->remote_ipv6);
     tcp_rpcs_account_disconnect (sid - 1, CONN_INFO(C)->remote_ip, CONN_INFO(C)->remote_ipv6);

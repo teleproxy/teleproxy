@@ -77,6 +77,11 @@ struct toml_config {
   int random_padding_only; /* -R; -1 = not set */
   int proxy_protocol;      /* --proxy-protocol; -1 = not set */
 
+  /* Drain timeout (reloadable).  Seconds an old secret keeps serving
+     in-flight connections after SIGHUP removes it; 0 = infinite (never
+     force-close), default 300. */
+  int drain_timeout_secs;
+
   /* DC probes (not reloadable) */
   int dc_probe_interval;   /* seconds between probe rounds; 0 = disabled; -1 = not set */
 

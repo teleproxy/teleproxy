@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+Graceful connection draining on secret removal (#45).
+
+- Removing a secret via SIGHUP reload no longer drops in-flight connections.
+  The slot transitions to a draining state — new connections matching the
+  removed secret are rejected, but existing ones keep working until they
+  close naturally or `drain_timeout_secs` (default 300, `0` = infinite)
+  elapses, at which point stragglers are force-closed.
+- Re-adding a draining secret revives the same slot — counters, byte totals,
+  and IP tracking carry over.  Pinned `-S` CLI secrets remain immutable.
+- New TOML option `drain_timeout_secs` (reloadable).
+- New stats: `secret_<lbl>_draining`, `secret_<lbl>_drain_age_seconds`,
+  `secret_<lbl>_rejected_draining`, `secret_<lbl>_drain_forced`.
+- Slot capacity expanded to 16 active + up to 16 draining at any moment.
+- Fix latent bug where the per-secret connection counter could go negative
+  if a TLS connection closed between handshake and obfs2 init.
+
 ## [4.9.0]
 
 PROXY protocol v1/v2 listener support.
