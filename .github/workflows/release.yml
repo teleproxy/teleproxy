@@ -77,6 +77,18 @@ jobs:
           files: release/*
           body_path: release-notes.md
 
+      - name: Trigger RPM repo rebuild
+        if: env.TELEPROXY_REPO_DISPATCH_TOKEN != ''
+        env:
+          TELEPROXY_REPO_DISPATCH_TOKEN: ${{ secrets.TELEPROXY_REPO_DISPATCH_TOKEN }}
+        run: |
+          curl -fsSL \
+            -X POST \
+            -H "Authorization: Bearer $TELEPROXY_REPO_DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/teleproxy/repo/dispatches \
+            -d "{\"event_type\":\"new-release\",\"client_payload\":{\"tag\":\"${GITHUB_REF_NAME}\"}}"
+
       - name: Notify Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
