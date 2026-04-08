@@ -199,7 +199,10 @@ static inline void *__tl_raw_msg_store_get_prepend_ptr (struct tl_out_state *tli
 }
 
 static inline void __tl_raw_msg_store_raw_data (struct tl_out_state *tlio_out, const void *buf, int len) {
-  assert (rwm_push_data (TL_OUT_RAW_MSG, buf, len) == len);
+  int written = rwm_push_data (TL_OUT_RAW_MSG, buf, len);
+  if (written != len) {
+    vkprintf (0, "__tl_raw_msg_store_raw_data: rwm_push_data returned %d instead of %d\n", written, len);
+  }
 }
 
 static inline void __tl_raw_msg_store_raw_msg (struct tl_out_state *tlio_out, struct raw_message *raw) {
