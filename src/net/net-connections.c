@@ -209,8 +209,8 @@ int prealloc_tcp_buffers (void) /* {{{ */ {
   for (i = MAX_TCP_RECV_BUFFERS - 1; i >= 0; i--) {
     struct msg_buffer *X = alloc_msg_buffer ((tcp_recv_buffers_num) ? tcp_recv_buffers[i + 1] : 0, TCP_RECV_BUFFER_SIZE);
     if (!X) {
-      vkprintf (0, "**FATAL**: cannot allocate tcp receive buffer\n");
-      exit (2);
+      vkprintf (0, "cannot allocate tcp receive buffer (got %d of %d)\n", tcp_recv_buffers_num, MAX_TCP_RECV_BUFFERS);
+      break;
     }
     vkprintf (3, "allocated %d byte tcp receive buffer #%d at %p\n", X->chunk->buffer_size, i, X);
     tcp_recv_buffers[i] = X;
@@ -828,11 +828,17 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
   while ((c->flags & (C_WANTRD | C_NORD | C_STOPREAD | C_ERROR | C_NET_FAILED)) == C_WANTRD) {
     if (!tcp_recv_buffers_num) {
       prealloc_tcp_buffers ();
+      if (!tcp_recv_buffers_num) {
+        vkprintf (0, "net_server_socket_reader: failed to allocate any recv buffers, failing connection %d\n", c->fd);
+        __sync_fetch_and_or (&c->flags, C_NET_FAILED);
+        job_signal (JOB_REF_CREATE_PASS (C), JS_ABORT);
+        return 0;
+      }
     }
 
     struct raw_message *in = malloc (sizeof (*in));
     rwm_init (in, 0);
-    
+
     int s = tcp_recv_buffers_total_size;
     assert (s > 0);
 

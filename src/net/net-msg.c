@@ -586,9 +586,10 @@ void *rwm_prepend_alloc (struct raw_message *raw, int alloc_bytes) /* {{{ */ {
   // struct msg_part *mp, *mpl;
   // int res = 0;
   if (!raw->first) {
-    rwm_push_data (raw, 0, alloc_bytes);
-    assert (raw->first == raw->last);
-    assert (raw->total_bytes == alloc_bytes);
+    if (rwm_push_data (raw, 0, alloc_bytes) != alloc_bytes) {
+      vkprintf (0, "rwm_prepend_alloc: rwm_push_data failed\n");
+      return NULL;
+    }
     return raw->first->part->data + raw->first_offset;
   }
 
@@ -633,9 +634,10 @@ void *rwm_postpone_alloc (struct raw_message *raw, int alloc_bytes) /* {{{ */ {
   // struct msg_part *mp, *mpl;
   // int res = 0;
   if (!raw->first) {
-    rwm_push_data (raw, 0, alloc_bytes);
-    assert (raw->first == raw->last);
-    assert (raw->total_bytes == alloc_bytes);
+    if (rwm_push_data (raw, 0, alloc_bytes) != alloc_bytes) {
+      vkprintf (0, "rwm_postpone_alloc: rwm_push_data failed\n");
+      return NULL;
+    }
     return raw->first->part->data + raw->first_offset;
   }
 
