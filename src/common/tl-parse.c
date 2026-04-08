@@ -143,16 +143,16 @@ int tls_set_error_format (struct tl_out_state *tlio_out, int errnum, const char 
 
 /* {{{ Raw msg methods */
 static inline void __tl_raw_msg_fetch_raw_data (struct tl_in_state *tlio_in, void *buf, int len) {
-  assert (rwm_fetch_data (TL_IN_RAW_MSG, buf, len) == len);
+  if (rwm_fetch_data (TL_IN_RAW_MSG, buf, len) != len) { vkprintf (0, "__tl_raw_msg_fetch_raw_data: rwm_fetch_data failed\n"); }
 }
 
 static inline void __tl_raw_msg_fetch_move (struct tl_in_state *tlio_in, int len) {
   assert (len >= 0);
-  assert (rwm_skip_data (TL_IN_RAW_MSG, len) == len);
+  if (rwm_skip_data (TL_IN_RAW_MSG, len) != len) { vkprintf (0, "__tl_raw_msg_fetch_skip: rwm_skip_data failed\n"); }
 }
 
 static inline void __tl_raw_msg_fetch_lookup (struct tl_in_state *tlio_in, void *buf, int len) {
-  assert (rwm_fetch_lookup (TL_IN_RAW_MSG, buf, len) == len);
+  if (rwm_fetch_lookup (TL_IN_RAW_MSG, buf, len) != len) { vkprintf (0, "__tl_raw_msg_fetch_lookup: rwm_fetch_lookup failed\n"); }
 }
 
 static inline void __tl_raw_msg_fetch_raw_message (struct tl_in_state *tlio_in, struct raw_message *raw, int len) {
@@ -210,13 +210,13 @@ static inline void __tl_raw_msg_store_raw_msg (struct tl_out_state *tlio_out, st
 }
 
 static inline void __tl_raw_msg_store_read_back (struct tl_out_state *tlio_out, int len) {
-  assert (rwm_fetch_data_back (TL_OUT_RAW_MSG, 0, len) == len);
+  if (rwm_fetch_data_back (TL_OUT_RAW_MSG, 0, len) != len) { vkprintf (0, "__tl_raw_msg_store_read_back: rwm_fetch_data_back failed\n"); }
 }
 
 static inline void __tl_raw_msg_store_read_back_nondestruct (struct tl_out_state *tlio_out, void *buf, int len) {
   struct raw_message r;
   rwm_clone (&r, TL_OUT_RAW_MSG);
-  assert (rwm_fetch_data_back (&r, buf, len) == len);
+  if (rwm_fetch_data_back (&r, buf, len) != len) { vkprintf (0, "__tl_raw_msg_store_read_back_nondestruct: rwm_fetch_data_back failed\n"); }
   rwm_free (&r);
 }
 
@@ -236,10 +236,10 @@ static inline void __tl_raw_msg_raw_msg_copy_through (struct tl_in_state *tlio_i
 
 static inline void __tl_raw_msg_str_copy_through (struct tl_in_state *tlio_in, struct tl_out_state *tlio_out, int len, int advance) {
   if (advance) {
-    assert (rwm_fetch_data (TL_IN_RAW_MSG, TL_OUT_STR, len) == len);
+    if (rwm_fetch_data (TL_IN_RAW_MSG, TL_OUT_STR, len) != len) { vkprintf (0, "__tl_raw_msg_str_copy_through: rwm_fetch_data failed\n"); }
     TL_OUT += len;
   } else {
-    assert (rwm_fetch_lookup (TL_IN_RAW_MSG, TL_OUT_STR, len) == len);
+    if (rwm_fetch_lookup (TL_IN_RAW_MSG, TL_OUT_STR, len) != len) { vkprintf (0, "__tl_raw_msg_str_copy_through: rwm_fetch_lookup failed\n"); }
     TL_OUT += len;
   }
 }
@@ -364,7 +364,7 @@ static inline void __tl_str_store_read_back_nondestruct (struct tl_out_state *tl
 }
 
 static inline void __tl_str_raw_msg_copy_through (struct tl_in_state *tlio_in, struct tl_out_state *tlio_out, int len, int advance) {
-  assert (rwm_push_data (TL_OUT_RAW_MSG, TL_IN_STR, len) == len);
+  if (rwm_push_data (TL_OUT_RAW_MSG, TL_IN_STR, len) != len) { vkprintf (0, "__tl_str_raw_msg_copy_through: rwm_push_data failed\n"); }
   if (advance) {
     TL_IN += advance;
   }

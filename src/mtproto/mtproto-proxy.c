@@ -478,24 +478,24 @@ void push_rpc_confirmation (JOB_REF_ARG (C), int confirm) {
   } else {
     int x = -1;
     struct raw_message m;
-    assert (rwm_create (&m, &x, 4) == 4);
-    assert (rwm_push_data (&m, &confirm, 4) == 4);
+    if (rwm_create (&m, &x, 4) != 4) { return; }
+    if (rwm_push_data (&m, &confirm, 4) != 4) { rwm_free (&m); return; }
 
     int z = lrand48_j() & 1;
     while (z-- > 0) {
       int t = lrand48_j();
-      assert (rwm_push_data (&m, &t, 4) == 4);
+      if (rwm_push_data (&m, &t, 4) != 4) { rwm_free (&m); return; }
     }
 
     tcp_rpc_conn_send (JOB_REF_CREATE_PASS (C), &m, 0);
 
     x = 0;
-    assert (rwm_create (&m, &x, 4) == 4);
+    if (rwm_create (&m, &x, 4) != 4) { return; }
 
     z = lrand48_j() & 1;
     while (z-- > 0) {
       int t = lrand48_j();
-      assert (rwm_push_data (&m, &t, 4) == 4);
+      if (rwm_push_data (&m, &t, 4) != 4) { rwm_free (&m); return; }
     }
 
     tcp_rpc_conn_send (JOB_REF_PASS (C), &m, 0);

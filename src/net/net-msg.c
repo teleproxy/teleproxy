@@ -1106,7 +1106,7 @@ static int crc32c_process (void *extra, const void *data, int len) {
 unsigned rwm_crc32c (struct raw_message *raw, int bytes) {
   unsigned crc32c = ~0;
 
-  assert (rwm_process (raw, bytes, crc32c_process, &crc32c) == bytes);
+  if (rwm_process (raw, bytes, crc32c_process, &crc32c) != bytes) { vkprintf (0, "rwm_crc32c: rwm_process failed\n"); return 0; }
 
   return ~crc32c;
 }
@@ -1122,7 +1122,7 @@ static int crc32_process (void *extra, const void *data, int len) {
 unsigned rwm_crc32 (struct raw_message *raw, int bytes) {
   unsigned crc32 = ~0;
 
-  assert (rwm_process (raw, bytes, crc32_process, &crc32) == bytes);
+  if (rwm_process (raw, bytes, crc32_process, &crc32) != bytes) { vkprintf (0, "rwm_crc32: rwm_process failed\n"); return 0; }
 
   return ~crc32;
 }
@@ -1146,7 +1146,7 @@ unsigned rwm_custom_crc32 (struct raw_message *raw, int bytes, crc32_partial_fun
   D.crc32 = -1;
 
   assert (raw->total_bytes >= bytes);
-  assert (rwm_process (raw, bytes, (void *)custom_crc32_process, &D) == bytes);
+  if (rwm_process (raw, bytes, (void *)custom_crc32_process, &D) != bytes) { vkprintf (0, "rwm_custom_crc32: rwm_process failed\n"); return 0; }
 
   return ~D.crc32;
 }
@@ -1214,17 +1214,17 @@ void *rwm_get_block_ptr (struct raw_message *raw) {
 void rwm_to_tl_string (struct raw_message *raw) {
   assert (raw->magic == RM_INIT_MAGIC);
   if (raw->total_bytes < 0xfe) {
-    assert (rwm_push_data_front (raw, &raw->total_bytes, 1) == 1);
+    if (rwm_push_data_front (raw, &raw->total_bytes, 1) != 1) { vkprintf (0, "rwm_tl_serialize: rwm_push_data_front failed\n"); return; }
   } else {
-    assert (rwm_push_data_front (raw, &raw->total_bytes, 3) == 3);
+    if (rwm_push_data_front (raw, &raw->total_bytes, 3) != 3) { vkprintf (0, "rwm_tl_serialize: rwm_push_data_front failed\n"); return; }
     int b = 0xfe;
-    assert (rwm_push_data_front (raw, &b, 1) == 1);
+    if (rwm_push_data_front (raw, &b, 1) != 1) { vkprintf (0, "rwm_tl_serialize: rwm_push_data_front failed\n"); return; }
   }
 
   int pad = (-raw->total_bytes) & 3;
   if (pad) {
     int zero = 0;
-    assert (rwm_push_data (raw, &zero, pad) == pad);
+    if (rwm_push_data (raw, &zero, pad) != pad) { vkprintf (0, "rwm_tl_serialize: rwm_push_data failed\n"); return; }
   }
 }
 
@@ -1232,11 +1232,11 @@ void rwm_from_tl_string (struct raw_message *raw) {
   assert (raw->magic == RM_INIT_MAGIC);
   int x = 0;
   assert (raw->total_bytes > 0);
-  assert (rwm_fetch_data (raw, &x, 1) == 1);
+  if (rwm_fetch_data (raw, &x, 1) != 1) { vkprintf (0, "rwm_tl_deserialize: rwm_fetch_data failed\n"); return; }
   assert (x != 0xff);
   if (x == 0xfe) {
     assert (raw->total_bytes >= 3);
-    assert (rwm_fetch_data (raw, &x, 3) == 3);
+    if (rwm_fetch_data (raw, &x, 3) != 3) { vkprintf (0, "rwm_tl_deserialize: rwm_fetch_data failed\n"); return; }
   }
   assert (raw->total_bytes >= x);
   rwm_trunc (raw, x);

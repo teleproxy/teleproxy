@@ -295,7 +295,7 @@ int cpu_tcp_aes_crypto_ctr128_decrypt_input (connection_job_t C) /* {{{ */ {
         }
 
         unsigned char header[5];
-        assert (rwm_fetch_lookup (&c->in_u, header, 5) == 5);
+        if (rwm_fetch_lookup (&c->in_u, header, 5) != 5) { fail_connection (C, -1); return 0; }
         if (memcmp (header, "\x17\x03\x03", 3) != 0) {
           vkprintf (1, "error while parsing packet: expect TLS header\n");
           fail_connection (C, -1);
@@ -303,7 +303,7 @@ int cpu_tcp_aes_crypto_ctr128_decrypt_input (connection_job_t C) /* {{{ */ {
         }
         c->left_tls_packet_length = 256 * header[3] + header[4];
         vkprintf (2, "Receive TLS-packet of length %d\n", c->left_tls_packet_length);
-        assert (rwm_skip_data (&c->in_u, 5) == 5);
+        if (rwm_skip_data (&c->in_u, 5) != 5) { fail_connection (C, -1); return 0; }
         len -= 5;
       }
 

@@ -1394,7 +1394,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
     }
 
     int packet_len = 0;
-    assert (rwm_fetch_lookup (&c->in, &packet_len, 4) == 4);
+    if (rwm_fetch_lookup (&c->in, &packet_len, 4) != 4) { fail_connection (C, -1); return 0; }
 
     if (D->in_packet_num == -3) {
       /* PROXY protocol: strip header before any protocol detection */
@@ -1443,27 +1443,27 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
         if (len < min_len + 8) {
           return min_len + 8 - len;
         }
-        assert (rwm_fetch_lookup (&c->in, &packet_len, 4) == 4);
+        if (rwm_fetch_lookup (&c->in, &packet_len, 4) != 4) { fail_connection (C, -1); return 0; }
       }
       vkprintf (1, "trying to determine type of connection from %s:%d\n", show_remote_ip (C), c->remote_port);
 #if __ALLOW_UNOBFS__
       if ((packet_len & 0xff) == 0xef) {
         D->flags |= RPC_F_COMPACT;
-        assert (rwm_skip_data (&c->in, 1) == 1);
+        if (rwm_skip_data (&c->in, 1) != 1) { fail_connection (C, -1); return 0; }
         D->in_packet_num = 0;
         vkprintf (1, "Short type\n");
         continue;
       } 
       if (packet_len == 0xeeeeeeee) {
         D->flags |= RPC_F_MEDIUM;
-        assert (rwm_skip_data (&c->in, 4) == 4);
+        if (rwm_skip_data (&c->in, 4) != 4) { fail_connection (C, -1); return 0; }
         D->in_packet_num = 0;
         vkprintf (1, "Medium type\n");
         continue;
       }
       if (packet_len == 0xdddddddd) {
         D->flags |= RPC_F_MEDIUM | RPC_F_PAD;
-        assert (rwm_skip_data (&c->in, 4) == 4);
+        if (rwm_skip_data (&c->in, 4) != 4) { fail_connection (C, -1); return 0; }
         D->in_packet_num = 0;
         vkprintf (1, "Medium type\n");
         continue;
@@ -1485,7 +1485,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
 
         vkprintf (1, "Established TLS connection from %s:%d\n", show_remote_ip (C), c->remote_port);
         unsigned char header[11];
-        assert (rwm_fetch_lookup (&c->in, header, 11) == 11);
+        if (rwm_fetch_lookup (&c->in, header, 11) != 11) { fail_connection (C, -1); return 0; }
         if (memcmp (header, "\x14\x03\x03\x00\x01\x01\x17\x03\x03", 9) != 0) {
           vkprintf (1, "error while parsing packet: bad client dummy ChangeCipherSpec\n");
           fail_connection (C, -1);
@@ -1498,7 +1498,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
           return min_len - len;
         }
 
-        assert (rwm_skip_data (&c->in, 11) == 11);
+        if (rwm_skip_data (&c->in, 11) != 11) { fail_connection (C, -1); return 0; }
         len -= 11;
         c->left_tls_packet_length = 256 * header[9] + header[10]; // store left length of current TLS packet in extra_int3
         vkprintf (2, "Receive first TLS packet of length %d\n", c->left_tls_packet_length);
@@ -1510,12 +1510,12 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
         }
         // now len >= c->left_tls_packet_length >= 64
 
-        assert (rwm_fetch_lookup (&c->in, &packet_len, 4) == 4);
+        if (rwm_fetch_lookup (&c->in, &packet_len, 4) != 4) { fail_connection (C, -1); return 0; }
 
         c->left_tls_packet_length -= 64; // skip header length
       } else if ((packet_len & 0xFFFFFF) == 0x010316 && (packet_len >> 24) >= 2 && ext_secret_cnt > 0 && allow_only_tls) {
         unsigned char header[5];
-        assert (rwm_fetch_lookup (&c->in, header, 5) == 5);
+        if (rwm_fetch_lookup (&c->in, header, 5) != 5) { fail_connection (C, -1); return 0; }
         min_len = 5 + 256 * header[3] + header[4];
         if (len < min_len) {
           return min_len - len;
@@ -1523,7 +1523,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
 
         int read_len = len <= 4096 ? len : 4096;
         unsigned char client_hello[read_len + 1]; // VLA
-        assert (rwm_fetch_lookup (&c->in, client_hello, read_len) == read_len);
+        if (rwm_fetch_lookup (&c->in, client_hello, read_len) != read_len) { fail_connection (C, -1); return 0; }
 
         const struct domain_info *info = get_sni_domain_info (client_hello, read_len);
         if (info == NULL) {
@@ -1620,7 +1620,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
           RETURN_TLS_ERROR(info);
         }
 
-        assert (rwm_skip_data (&c->in, len) == len);
+        if (rwm_skip_data (&c->in, len) != len) { fail_connection (C, -1); return 0; }
         c->flags |= C_IS_TLS;
         c->left_tls_packet_length = -1;
 
@@ -1696,7 +1696,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
 
 #if __ALLOW_UNOBFS__
       int tmp[2];
-      assert (rwm_fetch_lookup (&c->in, &tmp, 8) == 8);
+      if (rwm_fetch_lookup (&c->in, &tmp, 8) != 8) { fail_connection (C, -1); return 0; }
       if (!tmp[1] && !(c->flags & C_IS_TLS)) {
         D->crypto_flags |= RPCF_COMPACT_OFF;
         vkprintf (1, "Long type\n");
@@ -1715,7 +1715,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
       }
 
       unsigned char random_header[64];
-      assert (rwm_fetch_lookup (&c->in, random_header, 64) == 64);
+      if (rwm_fetch_lookup (&c->in, random_header, 64) != 64) { fail_connection (C, -1); return 0; }
 
       /* Save ciphertext — needed to re-init crypto with counter at byte 64 */
       unsigned char random_header_ct[64];
@@ -1755,7 +1755,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
           struct aes_crypto *T = c->crypto;
           evp_crypt (T->read_aeskey, random_header_ct, random_header_ct, 64);
 
-          assert (rwm_skip_data (&c->in, 64) == 64);
+          if (rwm_skip_data (&c->in, 64) != 64) { fail_connection (C, -1); return 0; }
           rwm_union (&c->in_u, &c->in);
           rwm_init (&c->in, 0);
           D->in_packet_num = 0;
@@ -1877,7 +1877,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
       D->in_packet_num = 0;
 
       assert (len >= 64);
-      assert (rwm_skip_data (&c->in, 64) == 64);
+      if (rwm_skip_data (&c->in, 64) != 64) { fail_connection (C, -1); return 0; }
       continue;
 #else
       vkprintf (1, "invalid \"random\" 64-byte header, entering global skip mode\n");
@@ -1940,7 +1940,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
       return packet_len + packet_len_bytes - len;
     }
 
-    assert (rwm_skip_data (&c->in, packet_len_bytes) == packet_len_bytes);
+    if (rwm_skip_data (&c->in, packet_len_bytes) != packet_len_bytes) { fail_connection (C, -1); return 0; }
     
     struct raw_message msg;
     int packet_type;
@@ -1950,7 +1950,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
       rwm_trunc (&msg, packet_len & -4);
     }
 
-    assert (rwm_fetch_lookup (&msg, &packet_type, 4) == 4);
+    if (rwm_fetch_lookup (&msg, &packet_type, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
 
     if (D->in_packet_num < 0) {
       assert (D->in_packet_num == -3);

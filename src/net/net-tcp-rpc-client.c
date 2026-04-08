@@ -119,7 +119,7 @@ static int tcp_rpcc_process_nonce_packet (connection_job_t C, struct raw_message
 
   int packet_num = D->in_packet_num - 1;
   int packet_type;
-  assert (rwm_fetch_lookup (msg, &packet_type, 4) == 4);
+  if (rwm_fetch_lookup (msg, &packet_type, 4) != 4) { return -1; }
   int packet_len = msg->total_bytes;
 
   if (packet_num != -2 || packet_type != RPC_NONCE) {
@@ -130,7 +130,7 @@ static int tcp_rpcc_process_nonce_packet (connection_job_t C, struct raw_message
     return -3;
   }
 
-  assert (rwm_fetch_data (msg, &P, packet_len) == packet_len);
+  if (rwm_fetch_data (msg, &P, packet_len) != packet_len) { return -1; }
 
   vkprintf (2, "Processing nonce packet, crypto schema: %d, key select: %d\n", P.s.crypto_schema, P.s.key_select);
 
@@ -288,8 +288,8 @@ static int tcp_rpcc_process_handshake_packet (connection_job_t C, struct raw_mes
   int packet_num = D->in_packet_num - 1;
   int packet_len = msg->total_bytes;
   int packet_type;
-  assert (rwm_fetch_lookup (msg, &packet_type, 4) == 4);
-  
+  if (rwm_fetch_lookup (msg, &packet_type, 4) != 4) { return -1; }
+
   if (packet_num != -1 || packet_type != RPC_HANDSHAKE) {
     return -2;
   }
@@ -297,7 +297,7 @@ static int tcp_rpcc_process_handshake_packet (connection_job_t C, struct raw_mes
     tcp_rpcc_send_handshake_error_packet (C, -3);
     return -3;
   }
-  assert (rwm_fetch_data (msg, &P, packet_len) == packet_len);  
+  if (rwm_fetch_data (msg, &P, packet_len) != packet_len) { return -1; }
   if (!matches_pid (&P.sender_pid, &D->remote_pid) && !(TCP_RPCC_FUNC(C)->mode_flags & TCP_RPC_IGNORE_PID)) {
     vkprintf (1, "PID mismatch during client RPC handshake: local %08x:%d:%d:%d, remote %08x:%d:%d:%d\n",
                  D->remote_pid.ip, D->remote_pid.port, D->remote_pid.pid, D->remote_pid.utime, P.sender_pid.ip, P.sender_pid.port, P.sender_pid.pid, P.sender_pid.utime);
@@ -345,7 +345,7 @@ int tcp_rpcc_parse_execute (connection_job_t C) /* {{{ */ {
     }
 
     int packet_len;
-    assert (rwm_fetch_lookup (&c->in, &packet_len, 4) == 4);
+    if (rwm_fetch_lookup (&c->in, &packet_len, 4) != 4) { fail_connection (C, -1); return 0; }
     if (packet_len <= 0 || (packet_len & 3) || (packet_len > TCP_RPCC_FUNC(C)->max_packet_len && TCP_RPCC_FUNC(C)->max_packet_len > 0)) {
       vkprintf (1, "error while parsing packet: bad packet length %d\n", packet_len);
       fail_connection (C, -1);
@@ -353,7 +353,7 @@ int tcp_rpcc_parse_execute (connection_job_t C) /* {{{ */ {
     }
 
     if (packet_len == 4) {
-      assert (rwm_skip_data (&c->in, 4) == 4);
+      if (rwm_skip_data (&c->in, 4) != 4) { fail_connection (C, -1); return 0; }
       continue;
     }
 
@@ -377,8 +377,8 @@ int tcp_rpcc_parse_execute (connection_job_t C) /* {{{ */ {
     }
 
     unsigned crc32;
-    assert (rwm_fetch_data_back (&msg, &crc32, 4) == 4);
-    
+    if (rwm_fetch_data_back (&msg, &crc32, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
+
     unsigned packet_crc32 = rwm_custom_crc32 (&msg, packet_len - 4, D->custom_crc_partial);
     if (crc32 != packet_crc32) {
       vkprintf (1, "error while parsing packet: crc32 mismatch: %08x != %08x\n", packet_crc32, crc32);
@@ -387,11 +387,11 @@ int tcp_rpcc_parse_execute (connection_job_t C) /* {{{ */ {
       return 0;
     }
 
-    assert (rwm_skip_data (&msg, 4) == 4); // len
+    if (rwm_skip_data (&msg, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; } // len
     int packet_num;
     int packet_type;
-    assert (rwm_fetch_data (&msg, &packet_num, 4) == 4);
-    assert (rwm_fetch_lookup (&msg, &packet_type, 4) == 4);
+    if (rwm_fetch_data (&msg, &packet_num, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
+    if (rwm_fetch_lookup (&msg, &packet_type, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
     packet_len -= 12;
 
     if (verbosity > 2) {

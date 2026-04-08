@@ -67,7 +67,7 @@ static int parse_v1 (struct raw_message *in, struct proxy_protocol_result *out) 
   memset (out, 0, sizeof (*out));
 
   if (strncmp (p, "UNKNOWN", 7) == 0) {
-    assert (rwm_skip_data (in, header_len) == header_len);
+    if (rwm_skip_data (in, header_len) != header_len) { return -1; }
     return header_len;
   }
 
@@ -110,7 +110,7 @@ static int parse_v1 (struct raw_message *in, struct proxy_protocol_result *out) 
 
   /* Destination port is the remainder — we don't need it */
 
-  assert (rwm_skip_data (in, header_len) == header_len);
+  if (rwm_skip_data (in, header_len) != header_len) { return -1; }
   return header_len;
 }
 
@@ -123,7 +123,7 @@ static int parse_v2 (struct raw_message *in, struct proxy_protocol_result *out) 
   }
 
   unsigned char hdr[16];
-  assert (rwm_fetch_lookup (in, hdr, 16) == 16);
+  if (rwm_fetch_lookup (in, hdr, 16) != 16) { return -1; }
 
   int ver_cmd = hdr[12];
   int version = (ver_cmd >> 4) & 0x0f;
@@ -144,7 +144,7 @@ static int parse_v2 (struct raw_message *in, struct proxy_protocol_result *out) 
 
   if (command == 0) {
     /* LOCAL: no address info (health check / internal) */
-    assert (rwm_skip_data (in, total_len) == total_len);
+    if (rwm_skip_data (in, total_len) != total_len) { return -1; }
     return total_len;
   }
 
@@ -154,7 +154,7 @@ static int parse_v2 (struct raw_message *in, struct proxy_protocol_result *out) 
     unsigned char addrs[12];
     /* Peek past the 16-byte header to get addresses */
     unsigned char full[28]; /* 16 header + 12 addrs */
-    assert (rwm_fetch_lookup (in, full, 28) == 28);
+    if (rwm_fetch_lookup (in, full, 28) != 28) { return -1; }
 
     memcpy (addrs, full + 16, 12);
     out->family = AF_INET;
@@ -163,7 +163,7 @@ static int parse_v2 (struct raw_message *in, struct proxy_protocol_result *out) 
   } else if (fam == 2 && addr_len >= 36) {
     /* AF_INET6: src_addr(16) + dst_addr(16) + src_port(2) + dst_port(2) */
     unsigned char full[52]; /* 16 header + 36 addrs */
-    assert (rwm_fetch_lookup (in, full, 52) == 52);
+    if (rwm_fetch_lookup (in, full, 52) != 52) { return -1; }
 
     out->family = AF_INET6;
     memcpy (out->src_ipv6, full + 16, 16);
@@ -172,7 +172,7 @@ static int parse_v2 (struct raw_message *in, struct proxy_protocol_result *out) 
   /* fam == 0 (AF_UNSPEC) or unknown: family stays 0 */
 
   /* Skip entire header including any TLV extensions */
-  assert (rwm_skip_data (in, total_len) == total_len);
+  if (rwm_skip_data (in, total_len) != total_len) { return -1; }
   return total_len;
 }
 

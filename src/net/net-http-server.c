@@ -176,7 +176,7 @@ int write_http_error_raw (connection_job_t C, struct raw_message *raw, int code)
     const char *error_message = http_get_error_msg_text (&code);
     ptr += sprintf (ptr, error_text_pattern, code, error_message, code, error_message);
     write_basic_http_header_raw (C, raw, code, 0, ptr - buff, 0, 0);
-    assert (rwm_push_data (raw, buff, ptr - buff) == ptr - buff);
+    if (rwm_push_data (raw, buff, ptr - buff) != ptr - buff) { return -1; }
     return ptr - buff;
   }
 }
@@ -222,7 +222,7 @@ int hts_parse_execute (connection_job_t C) {
     assert (ptr);
 
     len = http_parse_data (D, ptr, len);
-    assert (rwm_skip_data (&raw, len) == len);
+    if (rwm_skip_data (&raw, len) != len) { return -1; }
 
     if (D->parse_state == htqp_done) {
       if (D->header_size >= MAX_HTTP_HEADER_SIZE) {
@@ -260,12 +260,12 @@ int hts_parse_execute (connection_job_t C) {
           rwm_free (&raw);
           return res;        // need more bytes
         } else {
-          assert (rwm_skip_data (&c->in, D->header_size) == D->header_size);
+          if (rwm_skip_data (&c->in, D->header_size) != D->header_size) { fail_connection (C, -1); return 0; }
           if (res == SKIP_ALL_BYTES || !res) {
             if (D->data_size > 0) {
               int x = c->in.total_bytes;
               int y = x > D->data_size ? D->data_size : x;
-              assert (rwm_skip_data (&c->in, y) == y);
+              if (rwm_skip_data (&c->in, y) != y) { fail_connection (C, -1); return 0; }
               if (y < x) {
                 D->parse_state = htqp_start;
                 return y - x;
@@ -281,7 +281,7 @@ int hts_parse_execute (connection_job_t C) {
         }
       } else {
         //fprintf (stderr, "[parse error]\n");
-        assert (rwm_skip_data (&c->in, D->header_size) == D->header_size);
+        if (rwm_skip_data (&c->in, D->header_size) != D->header_size) { fail_connection (C, -1); return 0; }
         http_bad_headers++;
       }
       if (D->query_flags & QF_ERROR) {
@@ -522,7 +522,7 @@ int write_basic_http_header_raw (connection_job_t C, struct raw_message *raw, in
 
     ptr += sprintf (ptr, "\r\n");
 
-    assert (rwm_push_data (raw, buff, ptr - buff) == ptr - buff);
+    if (rwm_push_data (raw, buff, ptr - buff) != ptr - buff) { return -1; }
     return ptr - buff;
   }
 

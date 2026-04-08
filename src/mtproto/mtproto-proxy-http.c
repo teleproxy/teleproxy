@@ -416,7 +416,7 @@ int hts_stats_execute (connection_job_t c, struct raw_message *msg, int op) {
   }
 
   char ReqHdr[MAX_HTTP_HEADER_SIZE];
-  assert (rwm_fetch_data (msg, &ReqHdr, D->header_size) == D->header_size);
+  if (rwm_fetch_data (msg, &ReqHdr, D->header_size) != D->header_size) { return -1; }
 
   int is_stats = (D->uri_size == 6 && !memcmp (ReqHdr + D->uri_offset, "/stats", 6));
   int is_metrics = (D->uri_size == 8 && !memcmp (ReqHdr + D->uri_offset, "/metrics", 8));
@@ -444,7 +444,7 @@ int hts_stats_execute (connection_job_t c, struct raw_message *msg, int op) {
   struct raw_message *raw = calloc (sizeof (*raw), 1);
   rwm_init (raw, 0);
   write_basic_http_header_raw (c, raw, 200, 0, sb.pos, 0, content_type);
-  assert (rwm_push_data (raw, sb.buff, sb.pos) == sb.pos);
+  if (rwm_push_data (raw, sb.buff, sb.pos) != sb.pos) { return -1; }
   mpq_push_w (CONN_INFO(c)->out_queue, raw, 0);
   job_signal (JOB_REF_CREATE_PASS (c), JS_RUN);
 
@@ -515,7 +515,7 @@ int hts_execute (connection_job_t c, struct raw_message *msg, int op) {
   HQ->host_size = D->host_size;
   HQ->uri_offset = D->uri_offset;
   HQ->uri_size = D->uri_size;
-  assert (rwm_fetch_data (&HQ->msg, HQ->header, HQ->header_size) == HQ->header_size);
+  if (rwm_fetch_data (&HQ->msg, HQ->header, HQ->header_size) != HQ->header_size) { return -1; }
   HQ->header[HQ->header_size] = 0;
   assert (HQ->msg.total_bytes == HQ->data_size);
 

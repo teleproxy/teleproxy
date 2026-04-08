@@ -501,7 +501,7 @@ static void tcp_direct_dc_send_obfs2_init (connection_job_t C) {
   /* Send the 64-byte init as raw bytes, bypassing the crypto layer.
      We write to out_p (post-crypto buffer) because c->crypto will be set
      below — anything in c->out would be AES-encrypted on flush. */
-  assert (rwm_push_data (&c->out_p, init, 64) == 64);
+  if (rwm_push_data (&c->out_p, init, 64) != 64) { fail_connection (C, -1); return; }
 
   /* Now set up the AES-CTR crypto context for ongoing communication.
      The write counter must start at position 64 (we already "used" 64 bytes
@@ -600,7 +600,7 @@ static int socks5_handle_response (connection_job_t C) {
       return 1;
     }
     unsigned char resp[2];
-    assert (rwm_fetch_data (&c->in, resp, 2) == 2);
+    if (rwm_fetch_data (&c->in, resp, 2) != 2) { fail_connection (C, -1); return 0; }
     if (resp[0] != 0x05) {
       vkprintf (0, "socks5: bad version %d in greeting response\n", resp[0]);
       return -1;
@@ -630,7 +630,7 @@ static int socks5_handle_response (connection_job_t C) {
       return 1;
     }
     unsigned char resp[2];
-    assert (rwm_fetch_data (&c->in, resp, 2) == 2);
+    if (rwm_fetch_data (&c->in, resp, 2) != 2) { fail_connection (C, -1); return 0; }
     if (resp[1] != 0x00) {
       vkprintf (0, "socks5: auth failed (status 0x%02x)\n", resp[1]);
       return -1;
@@ -647,7 +647,7 @@ static int socks5_handle_response (connection_job_t C) {
       return 1;
     }
     unsigned char peek[5];
-    assert (rwm_fetch_lookup (&c->in, peek, 5) == 5);
+    if (rwm_fetch_lookup (&c->in, peek, 5) != 5) { fail_connection (C, -1); return 0; }
 
     int addr_len;
     if (peek[3] == 0x01) {
@@ -668,7 +668,7 @@ static int socks5_handle_response (connection_job_t C) {
 
     /* Consume the full response */
     unsigned char discard[280];
-    assert (rwm_fetch_data (&c->in, discard, total) == total);
+    if (rwm_fetch_data (&c->in, discard, total) != total) { fail_connection (C, -1); return 0; }
 
     if (peek[1] != 0x00) {
       vkprintf (0, "socks5: CONNECT failed (reply 0x%02x)\n", peek[1]);

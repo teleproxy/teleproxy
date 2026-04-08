@@ -104,7 +104,7 @@ int tcp_rpcs_default_execute (connection_job_t C, int op, struct raw_message *ra
   if (op == RPC_PING && raw->total_bytes == 12) {
     c->last_response_time = precise_now;    
     int P[3];
-    assert (rwm_fetch_data (raw, P, 12) == 12);
+    if (rwm_fetch_data (raw, P, 12) != 12) { return -1; }
     P[0] = RPC_PONG;    
     vkprintf (3, "received ping from " IP_PRINT_STR ":%d (val = %lld)\n", IP_TO_PRINT (c->remote_ip), (int)c->remote_port, *(long long *)(P + 1));
     tcp_rpc_conn_send_data (JOB_REF_CREATE_PASS (C), 12, P);
@@ -125,7 +125,7 @@ static int tcp_rpcs_process_nonce_packet (connection_job_t C, struct raw_message
   
   int packet_num = D->in_packet_num;
   int packet_type;
-  assert (rwm_fetch_lookup (msg, &packet_type, 4) == 4);
+  if (rwm_fetch_lookup (msg, &packet_type, 4) != 4) { return -1; }
   int packet_len = msg->total_bytes;
 
   if (packet_num != -2 || packet_type != RPC_NONCE) {
@@ -135,7 +135,7 @@ static int tcp_rpcs_process_nonce_packet (connection_job_t C, struct raw_message
     return -3;
   }
 
-  assert (rwm_fetch_data (msg, &P, packet_len) == packet_len);
+  if (rwm_fetch_data (msg, &P, packet_len) != packet_len) { return -1; }
 
   switch (P.s.crypto_schema) {
   case RPC_CRYPTO_NONE:
@@ -274,7 +274,7 @@ static int tcp_rpcs_process_handshake_packet (connection_job_t C, struct raw_mes
   
   int packet_num = D->in_packet_num;
   int packet_type;
-  assert (rwm_fetch_lookup (msg, &packet_type, 4) == 4);
+  if (rwm_fetch_lookup (msg, &packet_type, 4) != 4) { return -1; }
   int packet_len = msg->total_bytes;
 
   if (packet_num != -1 || packet_type != RPC_HANDSHAKE) {
@@ -284,7 +284,7 @@ static int tcp_rpcs_process_handshake_packet (connection_job_t C, struct raw_mes
     tcp_rpcs_send_handshake_error_packet (C, -3);
     return -3;
   }
-  assert (rwm_fetch_data (msg, &P, packet_len) == packet_len);
+  if (rwm_fetch_data (msg, &P, packet_len) != packet_len) { return -1; }
   memcpy (&D->remote_pid, &P.sender_pid, sizeof (struct process_id));
   if (!matches_pid (&PID, &P.peer_pid) && !(TCP_RPCS_FUNC(C)->mode_flags & TCP_RPC_IGNORE_PID)) {
     vkprintf (1, "PID mismatch during handshake: local %08x:%d:%d:%d, remote %08x:%d:%d:%d\n",
@@ -326,7 +326,7 @@ int tcp_rpcs_parse_execute (connection_job_t C) {
     }
 
     int packet_len;
-    assert (rwm_fetch_lookup (&c->in, &packet_len, 4) == 4);
+    if (rwm_fetch_lookup (&c->in, &packet_len, 4) != 4) { fail_connection (C, -1); return 0; }
 
     if (D->crypto_flags & RPCF_QUICKACK) {
       D->flags = (D->flags & ~RPC_F_QUICKACK) | (packet_len & RPC_F_QUICKACK);
@@ -360,7 +360,7 @@ int tcp_rpcs_parse_execute (connection_job_t C) {
     }
     
     if (packet_len == 4) {
-      assert (rwm_skip_data (&c->in, 4) == 4);
+      if (rwm_skip_data (&c->in, 4) != 4) { fail_connection (C, -1); return 0; }
       continue;
     }
     
@@ -378,7 +378,7 @@ int tcp_rpcs_parse_execute (connection_job_t C) {
     rwm_split_head (&msg, &c->in, packet_len);
 
     unsigned crc32;
-    assert (rwm_fetch_data_back (&msg, &crc32, 4) == 4);
+    if (rwm_fetch_data_back (&msg, &crc32, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
 
     unsigned packet_crc32 = rwm_custom_crc32 (&msg, packet_len - 4, D->custom_crc_partial);
     if (crc32 != packet_crc32) {
@@ -391,9 +391,9 @@ int tcp_rpcs_parse_execute (connection_job_t C) {
 
     int packet_num;
     int packet_type;
-    assert (rwm_skip_data (&msg, 4) == 4);
-    assert (rwm_fetch_data (&msg, &packet_num, 4) == 4);
-    assert (rwm_fetch_lookup (&msg, &packet_type, 4) == 4);
+    if (rwm_skip_data (&msg, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
+    if (rwm_fetch_data (&msg, &packet_num, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
+    if (rwm_fetch_lookup (&msg, &packet_type, 4) != 4) { rwm_free (&msg); fail_connection (C, -1); return 0; }
     packet_len -= 12;
 
     if (verbosity > 2) {

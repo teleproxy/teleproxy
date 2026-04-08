@@ -113,21 +113,21 @@ void tcp_rpc_conn_send (JOB_REF_ARG (C), struct raw_message *raw, int flags) {
 void tcp_rpc_conn_send_data (JOB_REF_ARG (C), int len, void *Q) {
   assert (!(len & 3));
   struct raw_message r;
-  assert (rwm_create (&r, Q, len) == len);
+  if (rwm_create (&r, Q, len) != len) { vkprintf (0, "%s: rwm_create failed\n", __func__); return; }
   tcp_rpc_conn_send (JOB_REF_PASS (C), &r, 0);
 }
 
 void tcp_rpc_conn_send_data_init (connection_job_t c, int len, void *Q) {
   assert (!(len & 3));
   struct raw_message r;
-  assert (rwm_create (&r, Q, len) == len);
+  if (rwm_create (&r, Q, len) != len) { vkprintf (0, "%s: rwm_create failed\n", __func__); return; }
   tcp_rpc_conn_send_init (c, &r, 0);
 }
 
 void tcp_rpc_conn_send_data_im (JOB_REF_ARG (C), int len, void *Q) {
   assert (!(len & 3));
   struct raw_message r;
-  assert (rwm_create (&r, Q, len) == len);
+  if (rwm_create (&r, Q, len) != len) { vkprintf (0, "%s: rwm_create failed\n", __func__); return; }
   tcp_rpc_conn_send_im (JOB_REF_PASS (C), &r, 0);
 }
 
@@ -138,7 +138,7 @@ int tcp_rpc_default_execute (connection_job_t C, int op, struct raw_message *raw
   if (op == RPC_PING && raw->total_bytes == 12) {
     c->last_response_time = precise_now;    
     int P[3];
-    assert (rwm_fetch_data (raw, P, 12) == 12);
+    if (rwm_fetch_data (raw, P, 12) != 12) { return -1; }
     P[0] = RPC_PONG;    
     //P[1] = Q[1];
     //P[2] = Q[2];
@@ -179,7 +179,7 @@ int tcp_rpc_write_packet (connection_job_t C, struct raw_message *raw) {
 int tcp_rpc_write_packet_compact (connection_job_t C, struct raw_message *raw) {
   if (raw->total_bytes == 5) {
     int flag = 0;
-    assert (rwm_fetch_data (raw, &flag, 1) == 1);
+    if (rwm_fetch_data (raw, &flag, 1) != 1) { return -1; }
     assert (flag == 0xdd);
     rwm_union (&CONN_INFO(C)->out, raw);
     return 0;
@@ -199,7 +199,7 @@ int tcp_rpc_write_packet_compact (connection_job_t C, struct raw_message *raw) {
   if (TCP_RPC_DATA(C)->flags & RPC_F_PAD) {
     int x = lrand48_j();
     int y = lrand48_j() & 3;
-    assert (rwm_push_data (raw, &x, y) == y);
+    if (rwm_push_data (raw, &x, y) != y) { return -1; }
   }
 
   int len = raw->total_bytes;
@@ -231,7 +231,7 @@ int tcp_rpc_flush (connection_job_t C) {
       assert (!(pad_bytes & 3));
       static const int pad_str[3] = {4, 4, 4};
       assert (pad_bytes <= 12);
-      assert (rwm_push_data (&c->out, pad_str, pad_bytes) == pad_bytes);
+      if (rwm_push_data (&c->out, pad_str, pad_bytes) != pad_bytes) { vkprintf (0, "tcp_rpc_flush: rwm_push_data failed\n"); return -1; }
     }
   }
   
