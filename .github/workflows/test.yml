@@ -289,7 +289,7 @@ jobs:
         sudo apt-get install -y build-essential libssl-dev zlib1g-dev git curl vim-common python3 python3-pip python3-venv netcat-openbsd
         python3 -m venv .venv
         source .venv/bin/activate
-        pip install requests telethon TelethonFakeTLS
+        pip install -r tests/requirements.txt
 
     - name: Build Teleproxy
       run: |
