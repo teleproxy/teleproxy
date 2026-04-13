@@ -176,7 +176,9 @@ int write_http_error_raw (connection_job_t C, struct raw_message *raw, int code)
     const char *error_message = http_get_error_msg_text (&code);
     ptr += sprintf (ptr, error_text_pattern, code, error_message, code, error_message);
     write_basic_http_header_raw (C, raw, code, 0, ptr - buff, 0, 0);
-    assert (rwm_push_data (raw, buff, ptr - buff) == ptr - buff);
+    if (rwm_push_data (raw, buff, ptr - buff) != ptr - buff) {
+      return -1;
+    }
     return ptr - buff;
   }
 }
@@ -522,7 +524,9 @@ int write_basic_http_header_raw (connection_job_t C, struct raw_message *raw, in
 
     ptr += sprintf (ptr, "\r\n");
 
-    assert (rwm_push_data (raw, buff, ptr - buff) == ptr - buff);
+    if (rwm_push_data (raw, buff, ptr - buff) != ptr - buff) {
+      return -1;
+    }
     return ptr - buff;
   }
 

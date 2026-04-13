@@ -1770,7 +1770,10 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
               D->flags |= RPC_F_COMPACT | RPC_F_EXTMODE2;
               break;
           }
-          assert (c->type->crypto_decrypt_input (C) >= 0);
+          if (c->type->crypto_decrypt_input (C) < 0) {
+            fail_connection (C, -1);
+            return 0;
+          }
 
           D->extra_int4 = pr.dc;
           D->extra_int2 = secret_id + 1;

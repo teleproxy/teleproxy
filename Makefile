@@ -79,7 +79,7 @@ DEPDIRS := ${DEP} $(addprefix ${DEP}/,${PROJECTS})
 ALLDIRS := ${DEPDIRS} ${OBJDIRS}
 
 
-.PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-secret-quota test-rate-limit test-top-ips test-ip-acl test-drs-delays test-cdn-dc test-ipv6-direct test-dc-lookup test-config-reload test-secret-drain test-check test-link test-link-ip test-stats-port test-install-config test-proxy-protocol test-dc-probes docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
+.PHONY:	all clean lint tests test test-tls test-multi-secret test-secret-limit test-secret-quota test-rate-limit test-top-ips test-ip-acl test-drs-delays test-cdn-dc test-ipv6-direct test-dc-lookup test-config-reload test-secret-drain test-check test-link test-link-ip test-stats-port test-install-config test-proxy-protocol test-dc-probes test-junk docker-image-amd64 docker-run-help-amd64 docker-image-arm64 docker-run-help-arm64 fuzz fuzz-run
 
 EXELIST	:= ${EXE}/teleproxy
 
@@ -424,6 +424,15 @@ test-autosecret:
 		(echo "Auto-secret test failed"; \
 		docker compose -f tests/docker-compose.autosecret-test.yml down; exit 1)
 	docker compose -f tests/docker-compose.autosecret-test.yml down
+
+test-junk:
+	@export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps) && \
+	echo "Using secret: $$TELEPROXY_SECRET" && \
+	timeout 120s docker compose -f tests/docker-compose.junk-test.yml up --build --exit-code-from tester || \
+		(echo "Junk traffic test failed"; \
+		docker compose -f tests/docker-compose.junk-test.yml logs teleproxy; \
+		docker compose -f tests/docker-compose.junk-test.yml down; exit 1)
+	docker compose -f tests/docker-compose.junk-test.yml down
 
 test-stats-port:
 	@export TELEPROXY_SECRET=$$(head -c 16 /dev/urandom | xxd -ps) && \

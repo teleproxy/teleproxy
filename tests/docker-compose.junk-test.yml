@@ -1,0 +1,41 @@
+services:
+  teleproxy:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.junk
+      args:
+        # Allow 2 buffer chunk allocations (1 for 2KB recv buffers, 1 for
+        # 512B HTTP headers). Enough for startup + healthcheck.
+        # Partial connections fill the 2KB chunk (~1000 buffers), so the
+        # next allocation needs chunk #3 → denied → alloc_msg_buffer=NULL.
+        FAULT_ALLOC_LIMIT: 2
+    environment:
+      - SECRET=${TELEPROXY_SECRET}
+      - PORT=8443
+      - STATS_PORT=8888
+      - WORKERS=1
+      - DIRECT_MODE=true
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8888/stats || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+  tester:
+    build: .
+    environment:
+      - TELEPROXY_HOST=teleproxy
+      - TELEPROXY_PORT=8443
+      - TELEPROXY_STATS_PORT=8888
+      # Fill chunk with partial connections, then burst to trigger failure
+      # ~2032 buffers total in 2 chunks. 128 for recv pool = 1904 free.
+      # Fill chunk with partial connections, then burst triggers the
+      # recv buffer replacement failure → assert(0) on buggy code.
+      - PARTIAL_CONNS=1910
+      - PARTIAL_BYTES=10
+      - BURST_CONNS=50
+    depends_on:
+      teleproxy:
+        condition: service_healthy
+    command: ["python", "test_junk_traffic.py"]

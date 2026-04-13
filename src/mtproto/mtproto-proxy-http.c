@@ -444,7 +444,12 @@ int hts_stats_execute (connection_job_t c, struct raw_message *msg, int op) {
   struct raw_message *raw = calloc (sizeof (*raw), 1);
   rwm_init (raw, 0);
   write_basic_http_header_raw (c, raw, 200, 0, sb.pos, 0, content_type);
-  assert (rwm_push_data (raw, sb.buff, sb.pos) == sb.pos);
+  if (rwm_push_data (raw, sb.buff, sb.pos) != sb.pos) {
+    rwm_free (raw);
+    free (raw);
+    sb_release (&sb);
+    return -1;
+  }
   mpq_push_w (CONN_INFO(c)->out_queue, raw, 0);
   job_signal (JOB_REF_CREATE_PASS (c), JS_RUN);
 

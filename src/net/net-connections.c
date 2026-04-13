@@ -209,8 +209,8 @@ int prealloc_tcp_buffers (void) /* {{{ */ {
   for (i = MAX_TCP_RECV_BUFFERS - 1; i >= 0; i--) {
     struct msg_buffer *X = alloc_msg_buffer ((tcp_recv_buffers_num) ? tcp_recv_buffers[i + 1] : 0, TCP_RECV_BUFFER_SIZE);
     if (!X) {
-      vkprintf (0, "**FATAL**: cannot allocate tcp receive buffer\n");
-      exit (2);
+      vkprintf (0, "cannot allocate tcp receive buffer (got %d of %d)\n", tcp_recv_buffers_num, MAX_TCP_RECV_BUFFERS);
+      break;
     }
     vkprintf (3, "allocated %d byte tcp receive buffer #%d at %p\n", X->chunk->buffer_size, i, X);
     tcp_recv_buffers[i] = X;
@@ -828,6 +828,12 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
   while ((c->flags & (C_WANTRD | C_NORD | C_STOPREAD | C_ERROR | C_NET_FAILED)) == C_WANTRD) {
     if (!tcp_recv_buffers_num) {
       prealloc_tcp_buffers ();
+      if (!tcp_recv_buffers_num) {
+        vkprintf (0, "net_server_socket_reader: failed to allocate recv buffers, failing connection %d\n", c->fd);
+        __sync_fetch_and_or (&c->flags, C_NET_FAILED);
+        job_signal (JOB_REF_CREATE_PASS (C), JS_ABORT);
+        return 0;
+      }
     }
 
     struct raw_message *in = malloc (sizeof (*in));
@@ -898,11 +904,13 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
     assert (!rs);
 
     int i;
+    int alloc_failed = 0;
     for (i = 0; i < p - 1; i++) {
       struct msg_buffer *X = alloc_msg_buffer (tcp_recv_buffers[i], TCP_RECV_BUFFER_SIZE);
       if (!X) {
-        vkprintf (0, "**FATAL**: cannot allocate tcp receive buffer\n");
-        assert (0);
+        vkprintf (0, "cannot allocate tcp receive buffer for connection %d\n", c->fd);
+        alloc_failed = 1;
+        break;
       }
       tcp_recv_buffers[i] = X;
       tcp_recv_iovec[i + 1].iov_base = X->data;
@@ -912,6 +920,14 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
     assert (c->conn);
     mpq_push_w (CONN_INFO(c->conn)->in_queue, in, 0);
     job_signal (JOB_REF_CREATE_PASS (c->conn), JS_RUN);
+
+    if (alloc_failed) {
+      tcp_recv_buffers_num = 0;
+      tcp_recv_buffers_total_size = 0;
+      __sync_fetch_and_or (&c->flags, C_NET_FAILED);
+      job_signal (JOB_REF_CREATE_PASS (C), JS_ABORT);
+      return 0;
+    }
   }
   return 0;
 }

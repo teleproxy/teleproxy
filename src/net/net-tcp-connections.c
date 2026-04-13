@@ -73,7 +73,10 @@ int cpu_tcp_server_writer (connection_job_t C) /* {{{ */ {
   struct raw_message *raw = malloc (sizeof (*raw));
 
   if (c->type->crypto_encrypt_output && c->crypto) {
-    c->type->crypto_encrypt_output (C);
+    if (c->type->crypto_encrypt_output (C) < 0) {
+      free (raw);
+      return -1;
+    }
     *raw = c->out_p;
     rwm_init (&c->out_p, 0);
   } else {
@@ -113,7 +116,9 @@ int cpu_tcp_server_reader (connection_job_t C) /* {{{ */ {
   }
         
   if (c->crypto) {
-    assert (c->type->crypto_decrypt_input (C) >= 0);
+    if (c->type->crypto_decrypt_input (C) < 0) {
+      return -1;
+    }
   }
 
   int r = c->in.total_bytes;
@@ -201,7 +206,10 @@ int cpu_tcp_aes_crypto_encrypt_output (connection_job_t C) /* {{{ */ {
   int l = out->total_bytes;
   l &= ~15;
   if (l) {
-    assert (rwm_encrypt_decrypt_to (&c->out, &c->out_p, l, T->write_aeskey, 16) == l);
+    if (rwm_encrypt_decrypt_to (&c->out, &c->out_p, l, T->write_aeskey, 16) != l) {
+      fail_connection (C, -1);
+      return -1;
+    }
   }
 
   return (-out->total_bytes) & 15;
@@ -218,7 +226,10 @@ int cpu_tcp_aes_crypto_decrypt_input (connection_job_t C) /* {{{ */ {
   int l = in->total_bytes;
   l &= ~15;
   if (l) {
-    assert (rwm_encrypt_decrypt_to (&c->in_u, &c->in, l, T->read_aeskey, 16) == l);
+    if (rwm_encrypt_decrypt_to (&c->in_u, &c->in, l, T->read_aeskey, 16) != l) {
+      fail_connection (C, -1);
+      return -1;
+    }
   }
 
   return (-in->total_bytes) & 15;
@@ -253,7 +264,10 @@ int cpu_tcp_aes_crypto_ctr128_encrypt_output (connection_job_t C) /* {{{ */ {
       vkprintf (2, "Send TLS-packet of length %d\n", len);
     }
 
-    assert (rwm_encrypt_decrypt_to (&c->out, &c->out_p, len, T->write_aeskey, 1) == len);
+    if (rwm_encrypt_decrypt_to (&c->out, &c->out_p, len, T->write_aeskey, 1) != len) {
+      fail_connection (C, -1);
+      return -1;
+    }
   }
 
   return 0;
@@ -295,7 +309,10 @@ int cpu_tcp_aes_crypto_ctr128_decrypt_input (connection_job_t C) /* {{{ */ {
       c->left_tls_packet_length -= len;
     }
     vkprintf (2, "Read %d bytes out of %d available\n", len, c->in_u.total_bytes);
-    assert (rwm_encrypt_decrypt_to (&c->in_u, &c->in, len, T->read_aeskey, 1) == len);
+    if (rwm_encrypt_decrypt_to (&c->in_u, &c->in, len, T->read_aeskey, 1) != len) {
+      fail_connection (C, -1);
+      return -1;
+    }
   }
 
   return 0;

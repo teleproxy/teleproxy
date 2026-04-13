@@ -1,0 +1,31 @@
+# Test-only build with fault injection for buffer allocation.
+# Limits the number of buffer chunk allocations to trigger the
+# alloc_msg_buffer failure path that crashes under production load.
+FROM alpine:3.21 AS builder
+
+RUN apk add --no-cache build-base openssl-dev zlib-dev linux-headers git libunwind-dev
+
+WORKDIR /src
+COPY . .
+
+# FAULT_ALLOC_LIMIT: after this many chunk allocations, alloc_new_msg_buffers_chunk
+# returns NULL. Set low enough to trigger under modest load, high enough for startup.
+ARG FAULT_ALLOC_LIMIT=3
+RUN make clean && make -j$(nproc) EXTRA_CFLAGS="-DFAULT_ALLOC_LIMIT=${FAULT_ALLOC_LIMIT}"
+
+FROM alpine:3.21
+
+RUN apk add --no-cache curl ca-certificates openssl zlib iproute2 libunwind
+RUN adduser -D -H -s /sbin/nologin teleproxy
+WORKDIR /opt/teleproxy
+COPY --from=builder /src/objs/bin/teleproxy /opt/teleproxy/
+RUN chmod +x /opt/teleproxy/teleproxy && ln -s teleproxy /opt/teleproxy/mtproto-proxy
+# Skip proxy-secret download (direct mode doesn't need it)
+RUN mkdir -p /opt/teleproxy/data
+COPY start.sh /opt/teleproxy/start.sh
+RUN chmod +x /opt/teleproxy/start.sh
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
+    CMD curl -f http://localhost:${STATS_PORT:-8888}/stats || exit 1
+
+ENTRYPOINT ["/opt/teleproxy/start.sh"]

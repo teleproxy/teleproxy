@@ -167,6 +167,11 @@ struct msg_buffers_chunk *alloc_new_msg_buffers_chunk (struct msg_buffers_chunk 
     // ML
     return 0;
   }
+#ifdef FAULT_ALLOC_LIMIT
+  if (allocated_buffer_chunks >= FAULT_ALLOC_LIMIT) {
+    return 0;
+  }
+#endif
   struct msg_buffers_chunk *C = malloc (MSG_BUFFERS_CHUNK_SIZE);
   if (!C) {
     return 0;

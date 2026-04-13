@@ -1238,7 +1238,9 @@ int rwm_process_encrypt_decrypt (struct rwm_encrypt_decrypt_tmp *x, const void *
   struct raw_message *res = x->raw;
   if (!x->buf_left) {
     struct msg_buffer *X = alloc_msg_buffer (res->last->part, x->left >= MSG_STD_BUFFER ? MSG_STD_BUFFER : x->left);
-    assert (X);
+    if (!X) {
+      return -1;
+    }
     struct msg_part *mp = new_msg_part (res->last, X);
     res->last->next = mp;
     res->last = mp;
@@ -1268,7 +1270,9 @@ int rwm_process_encrypt_decrypt (struct rwm_encrypt_decrypt_tmp *x, const void *
         res->last->data_end += t;
       
         struct msg_buffer *X = alloc_msg_buffer (res->last->part, x->left + len + bsize >= MSG_STD_BUFFER ? MSG_STD_BUFFER : x->left + len + bsize);
-        assert (X);
+        if (!X) {
+          return -1;
+        }
         struct msg_part *mp = new_msg_part (res->last, X);
         res->last->next = mp;
         res->last = mp;
@@ -1300,7 +1304,9 @@ int rwm_process_encrypt_decrypt (struct rwm_encrypt_decrypt_tmp *x, const void *
   while (1) {
     if (x->buf_left < bsize) {
       struct msg_buffer *X = alloc_msg_buffer (res->last->part, x->left + len >= MSG_STD_BUFFER ? MSG_STD_BUFFER : x->left + len);
-      assert (X);
+      if (!X) {
+        return -1;
+      }
       struct msg_part *mp = new_msg_part (res->last, X);
       res->last->next = mp;
       res->last = mp;
@@ -1348,7 +1354,12 @@ int rwm_encrypt_decrypt_to (struct raw_message *raw, struct raw_message *res, in
   if (!res->last || res->last->part->refcnt != 1) {
     int l = res->last ? bytes : bytes + RM_PREPEND_RESERVE;
     struct msg_buffer *X = alloc_msg_buffer (res->last ? res->last->part : 0, l >= MSG_STD_BUFFER ? MSG_STD_BUFFER : l);
-    assert (X);
+    if (!X) {
+      if (locked) {
+        locked->magic = MSG_PART_MAGIC;
+      }
+      return -1;
+    }
     struct msg_part *mp = new_msg_part (res->last, X);
     if (res->last) {
       res->last->next = mp;
@@ -1359,6 +1370,12 @@ int rwm_encrypt_decrypt_to (struct raw_message *raw, struct raw_message *res, in
       res->last_offset = res->first_offset = mp->offset = mp->data_end = RM_PREPEND_RESERVE;
     }
   }
+
+  struct msg_part *saved_last = res->last;
+  int saved_last_offset = res->last_offset;
+  int saved_last_data_end = res->last->data_end;
+  int saved_total_bytes = res->total_bytes;
+
   struct rwm_encrypt_decrypt_tmp t;
   t.bp = 0;
   if (res->last->part->refcnt == 1) {
@@ -1371,6 +1388,16 @@ int rwm_encrypt_decrypt_to (struct raw_message *raw, struct raw_message *res, in
   t.left = bytes;
   t.block_size = block_size;
   int r = rwm_process_and_advance (raw, bytes, (void *)rwm_process_encrypt_decrypt, &t);
+  if (r < 0) {
+    if (saved_last->next) {
+      msg_part_decref (saved_last->next);
+      saved_last->next = NULL;
+    }
+    res->last = saved_last;
+    res->last_offset = saved_last_offset;
+    res->last->data_end = saved_last_data_end;
+    res->total_bytes = saved_total_bytes;
+  }
   if (locked) {
     locked->magic = MSG_PART_MAGIC;
   }
