@@ -86,7 +86,7 @@ def main():
             s.sendall(partial_data)
             partial_sockets.append(s)
         except OSError:
-            pass
+            pass  # connection failures expected under buffer pressure
         if (i + 1) % 200 == 0:
             print(f"  Opened {i + 1}/{PARTIAL_CONNS}...")
 
@@ -105,7 +105,7 @@ def main():
             try:
                 s.close()
             except OSError:
-                pass
+                pass  # best-effort cleanup, socket may already be reset
         check("survived_partial_fill", False, "died before burst")
         print(f"\nResults: {passed} passed, {failed} failed")
         sys.exit(1 if failed else 0)
@@ -126,7 +126,7 @@ def main():
             s.sendall(burst_data)
             s.close()
         except OSError:
-            pass
+            pass  # connection failures expected under buffer pressure
 
     # Brief pause for crash to manifest
     time.sleep(3)
@@ -150,7 +150,7 @@ def main():
         try:
             s.close()
         except OSError:
-            pass
+            pass  # best-effort cleanup, socket may already be reset
     print(f"  Closed {opened} partial connections")
 
     # Step 7: Verify proxy still works after cleanup
