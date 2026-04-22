@@ -31,6 +31,29 @@
 #include "common/cpuid.h"
 #include "common/kprintf.h"
 
+#ifdef __clang__
+#include <immintrin.h>
+#include <wmmintrin.h>
+
+#define __builtin_ia32_loaddqu(x) \
+    (v2di)_mm_loadu_si128((const __m128i *)(x))
+
+#define __builtin_ia32_pshufb128(a, b) \
+    (v2di)_mm_shuffle_epi8((__m128i)(a), (__m128i)(b))
+
+#define __builtin_ia32_punpckhqdq128(a, b) \
+    (v2di)_mm_unpackhi_epi64((__m128i)(a), (__m128i)(b))
+
+#define __builtin_ia32_pslldqi128(a, imm) \
+    (v2di)_mm_slli_si128((__m128i)(a), ((imm) / 8))
+
+#define __builtin_ia32_psrldqi128(a, imm) \
+    (v2di)_mm_srli_si128((__m128i)(a), ((imm) / 8))
+
+#define __builtin_ia32_pclmulqdq128(a, b, imm) \
+    (v2di)_mm_clmulepi64_si128((__m128i)(a), (__m128i)(b), (imm))
+
+#endif
 
 #if defined(__x86_64__) || defined(__i386__)
 #define FASTMOV_RMI32_TO_SSE(dst, src) \
