@@ -11,6 +11,16 @@
   local backends, and supports unix sockets (`EE_BACKEND=unix:/run/nginx.sock`)
   for nginx fronts. Configurable in TOML as
   `domain = [{ name = "...", backend = "..." }]`.
+- Fix pre-handshake sockets accumulating as `total_connections` until OS-level
+  TCP keepalive killed them ~2 hours later (#63). The 10-second handshake
+  alarm in `tcp_rpcs_ext_alarm` / `tcp_rpcs_ext_drs_alarm` now drops the
+  socket instead of no-opping when fake-TLS isn't configured. Visible on
+  busy public proxies as a high `total_connections` gauge that didn't track
+  authenticated user count, especially under random-padding (`dd`) mode where
+  scanners and probes get accepted but never complete obfs2.
+- New `make test-handshake-timeout` regression test asserts
+  `total_connections` returns to baseline within 15 seconds of opening junk
+  sockets.
 
 ## [4.12.2]
 

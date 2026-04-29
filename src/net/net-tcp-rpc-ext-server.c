@@ -1273,6 +1273,14 @@ static int proxy_connection (connection_job_t C, const struct domain_info *info)
   return c->type->parse_execute (C);
 }
 
+/* Forward to camouflage backend if set, else drop the socket. Fixes #63. */
+static int handle_handshake_timeout (connection_job_t C) {
+  if (default_domain_info != NULL) { return proxy_connection (C, default_domain_info); }
+  vkprintf (1, "handshake timeout from %s\n", show_remote_ip (C));
+  fail_connection (C, -1);
+  return 0;
+}
+
 int tcp_rpcs_ext_alarm (connection_job_t C) {
   if (CONN_INFO(C)->flags & C_PROXY_PROTOCOL) {
     proxy_protocol_errors_total++;
@@ -1280,16 +1288,11 @@ int tcp_rpcs_ext_alarm (connection_job_t C) {
     fail_connection (C, -1);
     return 0;
   }
-  struct tcp_rpc_data *D = TCP_RPC_DATA (C);
-  if (D->in_packet_num == -3 && default_domain_info != NULL) {
-    return proxy_connection (C, default_domain_info);
-  } else {
-    return 0;
-  }
+  if (TCP_RPC_DATA (C)->in_packet_num == -3) { return handle_handshake_timeout (C); }
+  return 0;
 }
 
-/* DRS alarm handler: handles both handshake timeout and inter-record delay resume.
-   Both JS_RUN and JS_ALARM run on the NET-CPU thread, so calling read_write is safe. */
+/* DRS alarm: handshake timeout + inter-record delay resume. JS_RUN and JS_ALARM both run on NET-CPU, so calling read_write here is safe. */
 int tcp_rpcs_ext_drs_alarm (connection_job_t C) {
   struct connection_info *c = CONN_INFO (C);
   struct tcp_rpc_data *D = TCP_RPC_DATA (C);
@@ -1312,9 +1315,7 @@ int tcp_rpcs_ext_drs_alarm (connection_job_t C) {
   }
 
   /* Handshake timeout (pre-handshake state) */
-  if (D->in_packet_num == -3 && default_domain_info != NULL) {
-    return proxy_connection (C, default_domain_info);
-  }
+  if (D->in_packet_num == -3) { return handle_handshake_timeout (C); }
 
   /* DRS delay resume: timer fired, process next record */
   if (c->flags & C_IS_TLS) {

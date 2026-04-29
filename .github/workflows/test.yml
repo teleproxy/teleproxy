@@ -134,6 +134,9 @@ jobs:
     - name: Run Junk Traffic Resilience Test
       run: make test-junk
 
+    - name: Run Handshake-Timeout Drain Test
+      run: make test-handshake-timeout
+
     - name: Run CSV Secret-Label Test
       run: make test-csv-label
 

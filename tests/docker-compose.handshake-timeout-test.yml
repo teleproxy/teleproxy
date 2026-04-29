@@ -1,0 +1,30 @@
+services:
+  teleproxy:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      - SECRET=${TELEPROXY_SECRET}
+      - PORT=8443
+      - STATS_PORT=8888
+      - WORKERS=1
+      - DIRECT_MODE=true
+      - RANDOM_PADDING=true
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8888/stats || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+  tester:
+    build: .
+    environment:
+      - TELEPROXY_HOST=teleproxy
+      - TELEPROXY_PORT=8443
+      - TELEPROXY_STATS_PORT=8888
+      - JUNK_CONNS=200
+    depends_on:
+      teleproxy:
+        condition: service_healthy
+    command: ["python", "test_handshake_timeout.py"]
