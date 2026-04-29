@@ -50,6 +50,7 @@
 #include "net/net-tcp-connections.h"
 #include "net/net-tcp-drs.h"
 #include "net/net-tcp-rpc-ext-server.h"
+#include "net/net-tcp-rpc-ext-domain.h"
 #include "net/net-tcp-rpc-ext-uniq-bloom.h"
 #include "net/net-tcp-direct-dc.h"
 #include "net/net-obfs2-parse.h"
@@ -67,6 +68,7 @@
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -510,25 +512,11 @@ void tcp_rpcs_set_ext_rand_pad_only(int set) {
    shared write access to the ext_secret_* state defined above and were
    moved out to keep this file under the LLM-friendly file-size cap. */
 
-static int allow_only_tls;
+int allow_only_tls;
+struct domain_info *default_domain_info;
+struct domain_info *domains[DOMAIN_HASH_MOD];
 
-struct domain_info {
-  const char *domain;
-  int port;
-  struct in_addr target;
-  unsigned char target_ipv6[16];
-  short server_hello_encrypted_size;
-  char use_random_encrypted_size;
-  char is_reversed_extension_order;
-  struct domain_info *next;
-};
-
-static struct domain_info *default_domain_info;
-
-#define DOMAIN_HASH_MOD 257
-static struct domain_info *domains[DOMAIN_HASH_MOD];
-
-static struct domain_info **get_domain_info_bucket (const char *domain, size_t len) {
+struct domain_info **get_domain_info_bucket (const char *domain, size_t len) {
   size_t i;
   unsigned hash = 0;
   for (i = 0; i < len; i++) {
@@ -752,17 +740,24 @@ static unsigned char *create_request (const char *domain) {
 }
 
 static int update_domain_info (struct domain_info *info) {
-  const char *domain = info->domain;
+  /* Unix-socket backend: no TLS server to fingerprint, fall back to safe defaults. */
+  if (info->unix_path) {
+    return 0;
+  }
 
-  // Try parsing as a literal IP address first
+  /* Connect to the camouflage backend for fingerprinting; falls back to the
+     SNI domain itself when no separate backend is configured. */
+  const char *domain = info->domain;
+  const char *host_str = info->backend_host ? info->backend_host : domain;
+
   struct in_addr addr4;
   struct in6_addr addr6;
   int af = 0;
-  if (inet_pton (AF_INET, domain, &addr4) == 1) {
+  if (inet_pton (AF_INET, host_str, &addr4) == 1) {
     af = AF_INET;
     info->target = addr4;
     memset (info->target_ipv6, 0, sizeof (info->target_ipv6));
-  } else if (inet_pton (AF_INET6, domain, &addr6) == 1) {
+  } else if (inet_pton (AF_INET6, host_str, &addr6) == 1) {
     af = AF_INET6;
     info->target.s_addr = 0;
     memcpy (info->target_ipv6, &addr6, sizeof (info->target_ipv6));
@@ -770,9 +765,9 @@ static int update_domain_info (struct domain_info *info) {
 
   struct hostent *host = NULL;
   if (!af) {
-    host = kdb_gethostbyname (domain);
+    host = kdb_gethostbyname (host_str);
     if (host == NULL || host->h_addr == NULL) {
-      kprintf ("Failed to resolve host %s\n", domain);
+      kprintf ("Failed to resolve host %s\n", host_str);
       return 0;
     }
     assert (host->h_addrtype == AF_INET || host->h_addrtype == AF_INET6);
@@ -792,7 +787,7 @@ static int update_domain_info (struct domain_info *info) {
   for (i = 0; i < TRIES; i++) {
     sockets[i] = socket (af, SOCK_STREAM, IPPROTO_TCP);
     if (sockets[i] < 0) {
-      kprintf ("Failed to open socket for %s: %s\n", domain, strerror (errno));
+      kprintf ("Failed to open socket for %s: %s\n", host_str, strerror (errno));
       return 0;
     }
     if (fcntl (sockets[i], F_SETFL, O_NONBLOCK) == -1) {
@@ -831,14 +826,14 @@ static int update_domain_info (struct domain_info *info) {
     }
 
     if (e_connect == -1 && errno != EINPROGRESS) {
-      kprintf ("Failed to connect to %s: %s\n", domain, strerror (errno));
+      kprintf ("Failed to connect to %s: %s\n", host_str, strerror (errno));
       return 0;
     }
   }
 
   unsigned char *requests[TRIES];
   for (i = 0; i < TRIES; i++) {
-    requests[i] = create_request (domain);
+    requests[i] = create_request (info->domain);
   }
   unsigned char *responses[TRIES] = {};
   int response_len[TRIES] = {};
@@ -1070,62 +1065,6 @@ static const struct domain_info *get_sni_domain_info (const unsigned char *reque
   return info;
 }
 
-void tcp_rpc_add_proxy_domain (const char *domain) {
-  assert (domain != NULL);
-
-  struct domain_info *info = calloc (1, sizeof (struct domain_info));
-  assert (info != NULL);
-  info->port = 443;
-
-  const char *host_start = domain;
-  const char *host_end = NULL;
-
-  if (domain[0] == '[') {
-    // [IPv6]:port format
-    host_end = strchr (domain, ']');
-    if (host_end == NULL) {
-      kprintf ("Invalid IPv6 address: %s\n", domain);
-      free (info);
-      return;
-    }
-    host_start = domain + 1;
-    const char *after_bracket = host_end + 1;
-    if (*after_bracket == ':') {
-      info->port = atoi (after_bracket + 1);
-    }
-    info->domain = strndup (host_start, host_end - host_start);
-  } else {
-    // Check for host:port — but only if the last colon has digits after it
-    // and there is at most one colon (to avoid matching bare IPv6 like ::1)
-    const char *colon = strrchr (domain, ':');
-    if (colon != NULL && strchr (domain, ':') == colon) {
-      // Exactly one colon — treat as host:port
-      info->port = atoi (colon + 1);
-      info->domain = strndup (domain, colon - domain);
-    } else {
-      info->domain = strdup (domain);
-    }
-  }
-
-  if (info->port <= 0 || info->port > 65535) {
-    kprintf ("Invalid port in domain spec: %s\n", domain);
-    free ((void *)info->domain);
-    free (info);
-    return;
-  }
-
-  kprintf ("Proxy domain: %s:%d\n", info->domain, info->port);
-
-  struct domain_info **bucket = get_domain_info_bucket (info->domain, strlen (info->domain));
-  info->next = *bucket;
-  *bucket = info;
-
-  if (!allow_only_tls) {
-    allow_only_tls = 1;
-    default_domain_info = info;
-  }
-}
-
 void tcp_rpc_init_proxy_domains() {
   int i;
   for (i = 0; i < DOMAIN_HASH_MOD; i++) {
@@ -1255,6 +1194,18 @@ static int is_allowed_timestamp (int timestamp) {
   return 0;
 }
 
+static int connect_unix_backend (const char *path) {
+  int fd = socket (AF_UNIX, SOCK_STREAM, 0);
+  if (fd < 0) { return -1; }
+  struct sockaddr_un sun = { .sun_family = AF_UNIX };
+  strncpy (sun.sun_path, path, sizeof (sun.sun_path) - 1);
+  if (fcntl (fd, F_SETFL, O_NONBLOCK) < 0
+      || (connect (fd, (struct sockaddr *)&sun, sizeof (sun)) < 0 && errno != EINPROGRESS)) {
+    close (fd); return -1;
+  }
+  return fd;
+}
+
 static int proxy_connection (connection_job_t C, const struct domain_info *info) {
   struct connection_info *c = CONN_INFO(C);
 
@@ -1264,20 +1215,23 @@ static int proxy_connection (connection_job_t C, const struct domain_info *info)
 
   assert (check_conn_functions (&ct_proxy_pass, 0) >= 0);
 
-  const char zero[16] = {};
-  if (info->target.s_addr == 0 && !memcmp (info->target_ipv6, zero, 16)) {
-    vkprintf (0, "failed to proxy request to %s\n", info->domain);
-    fail_connection (C, -17);
-    return 0;
-  }
-
-  int port = c->our_port == 80 ? 80 : info->port;
-
   int cfd = -1;
-  if (info->target.s_addr) {
-    cfd = client_socket (info->target.s_addr, port, 0);
+  int port = 0;
+  if (info->unix_path) {
+    cfd = connect_unix_backend (info->unix_path);
   } else {
-    cfd = client_socket_ipv6 (info->target_ipv6, port, SM_IPV6);
+    const char zero[16] = {};
+    if (info->target.s_addr == 0 && !memcmp (info->target_ipv6, zero, 16)) {
+      vkprintf (0, "failed to proxy request to %s\n", info->domain);
+      fail_connection (C, -17);
+      return 0;
+    }
+    port = c->our_port == 80 ? 80 : info->port;
+    if (info->target.s_addr) {
+      cfd = client_socket (info->target.s_addr, port, 0);
+    } else {
+      cfd = client_socket_ipv6 (info->target_ipv6, port, SM_IPV6);
+    }
   }
 
   if (cfd < 0) {

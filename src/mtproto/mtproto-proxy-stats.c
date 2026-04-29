@@ -1178,7 +1178,7 @@ void mtfront_prepare_link_page (stats_buffer_t *sb,
     char secret_hex[1024];
     int pos = 0;
 
-    if (toml_cfg.domain_count > 0 && toml_cfg.domains[0][0]) {
+    if (toml_cfg.domain_count > 0 && toml_cfg.domains[0].name[0]) {
       pos += snprintf (secret_hex + pos, sizeof (secret_hex) - pos, "ee");
       for (int j = 0; j < 16; j++) {
         int rem = (int)sizeof (secret_hex) - pos;
@@ -1188,7 +1188,7 @@ void mtfront_prepare_link_page (stats_buffer_t *sb,
         if (w < 0 || w >= rem) break;
         pos += w;
       }
-      const char *dom = toml_cfg.domains[0];
+      const char *dom = toml_cfg.domains[0].name;
       const char *dom_colon = strchr (dom, ':');
       int dom_len = dom_colon ? (int)(dom_colon - dom) : (int)strlen (dom);
       for (int j = 0; j < dom_len; j++) {

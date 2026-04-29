@@ -1154,7 +1154,10 @@ int cmd_check (int argc, char *argv[]) {
     }
     if (ctx.domain_count == 0) {
       for (int i = 0; i < toml_cfg.domain_count; i++) {
-        parse_domain (toml_cfg.domains[i], ctx.domains[ctx.domain_count],
+        const char *spec = toml_cfg.domains[i].backend[0]
+                           ? toml_cfg.domains[i].backend
+                           : toml_cfg.domains[i].name;
+        parse_domain (spec, ctx.domains[ctx.domain_count],
                       sizeof (ctx.domains[0]),
                       &ctx.domain_ports[ctx.domain_count]);
         ctx.domain_count++;

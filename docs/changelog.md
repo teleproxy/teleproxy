@@ -7,6 +7,7 @@ description: "Release history for Teleproxy. Version details, new features, bug 
 ## Unreleased
 
 - **`CONFIG_DOWNLOAD_PROXY` env var for the proxy-multi.conf download** ([#61](https://github.com/teleproxy/teleproxy/issues/61)). Hosts that can't reach `core.telegram.org` directly can now route the config refresh through an outbound HTTP or SOCKS proxy. Accepts any URL `curl -x` understands (`http://`, `https://`, `socks5://`, `socks5h://`, with optional `user:pass@`). Falls back to `SOCKS5_PROXY` when unset, so users who already proxy DC traffic don't need to set anything new. Applies to the initial fetch in `start.sh` and the 6-hour cron refresh.
+- **Split SNI domain from camouflage backend** ([#62](https://github.com/teleproxy/teleproxy/issues/62)). The fake-TLS feature used to require `EE_DOMAIN` to be both the SNI hostname and the backend connect target — operators worked around it by editing `/etc/hosts`. New `EE_BACKEND` env var separates the two: `EE_DOMAIN` keeps a clean public SNI name like `cloudflare.com`, while `EE_BACKEND` points at the actual backend (`127.0.0.1:8443`, `[::1]:8443`, or `unix:/run/nginx.sock`). Reality-style. Available as TOML too: `domain = [{ name = "cloudflare.com", backend = "127.0.0.1:8443" }]`. The legacy `EE_DOMAIN=host:port` and `domain = "..."` strings still work unchanged.
 
 ## 4.12.2
 

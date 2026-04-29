@@ -370,8 +370,8 @@ int toml_config_load (const char *path, struct toml_config *cfg,
     cfg->domain_count = 0;
     toml_datum_t d = toml_get (top, "domain");
     if (d.type == TOML_STRING) {
-      /* single domain as string */
-      snprintf (cfg->domains[0], sizeof (cfg->domains[0]), "%s", d.u.s);
+      snprintf (cfg->domains[0].name, sizeof (cfg->domains[0].name), "%s", d.u.s);
+      cfg->domains[0].backend[0] = '\0';
       cfg->domain_count = 1;
     } else if (d.type == TOML_ARRAY) {
       int n = d.u.arr.size;
@@ -382,12 +382,30 @@ int toml_config_load (const char *path, struct toml_config *cfg,
       }
       for (int i = 0; i < n; i++) {
         toml_datum_t elem = d.u.arr.elem[i];
-        if (elem.type != TOML_STRING) {
-          snprintf (errbuf, errlen, "domain[%d]: expected string", i);
+        cfg->domains[i].backend[0] = '\0';
+        if (elem.type == TOML_STRING) {
+          snprintf (cfg->domains[i].name, sizeof (cfg->domains[i].name), "%s", elem.u.s);
+        } else if (elem.type == TOML_TABLE) {
+          toml_datum_t name_d = toml_get (elem, "name");
+          if (name_d.type != TOML_STRING) {
+            snprintf (errbuf, errlen, "domain[%d]: missing 'name' string", i);
+            toml_free (res);
+            return -1;
+          }
+          snprintf (cfg->domains[i].name, sizeof (cfg->domains[i].name), "%s", name_d.u.s);
+          toml_datum_t backend_d = toml_get (elem, "backend");
+          if (backend_d.type == TOML_STRING) {
+            snprintf (cfg->domains[i].backend, sizeof (cfg->domains[i].backend), "%s", backend_d.u.s);
+          } else if (backend_d.type != TOML_UNKNOWN) {
+            snprintf (errbuf, errlen, "domain[%d].backend: expected string", i);
+            toml_free (res);
+            return -1;
+          }
+        } else {
+          snprintf (errbuf, errlen, "domain[%d]: expected string or table", i);
           toml_free (res);
           return -1;
         }
-        snprintf (cfg->domains[i], sizeof (cfg->domains[i]), "%s", elem.u.s);
       }
       cfg->domain_count = n;
     }

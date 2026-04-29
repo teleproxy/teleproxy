@@ -50,7 +50,10 @@ struct toml_config {
   char proxy_tag[33];      /* -P; empty = not set (32 hex + NUL) */
 
   /* TLS (not reloadable) */
-  char domains[TOML_CONFIG_MAX_DOMAINS][256];
+  struct toml_domain {
+    char name[256];     /* SNI hostname advertised in fake-TLS ClientHello */
+    char backend[256];  /* host:port or unix:/path; empty = forward to name itself */
+  } domains[TOML_CONFIG_MAX_DOMAINS];
   int domain_count;
 
   /* Stats (reloadable) */

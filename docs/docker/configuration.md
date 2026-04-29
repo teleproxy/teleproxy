@@ -23,7 +23,8 @@ description: "Complete reference for Teleproxy Docker environment variables: sec
 | `DIRECT_MODE` | false | Connect directly to Telegram DCs |
 | `RANDOM_PADDING` | false | Enable random padding only (DD mode) |
 | `EXTERNAL_IP` | auto-detected | Public IP for NAT environments |
-| `EE_DOMAIN` | — | Domain for Fake-TLS. Accepts `host:port` for custom TLS backends |
+| `EE_DOMAIN` | — | Domain for Fake-TLS (SNI hostname advertised to clients) |
+| `EE_BACKEND` | — | Optional backend for fake-TLS camouflage. Splits the SNI domain (`EE_DOMAIN`) from the connect target. Accepts `host:port`, `[ipv6]:port`, or `unix:/path` for a local socket — useful when `EE_DOMAIN` is a public SNI like `cloudflare.com` but the actual backend is a local nginx |
 | `IP_BLOCKLIST` | — | Path to CIDR blocklist file |
 | `IP_ALLOWLIST` | — | Path to CIDR allowlist file |
 | `STATS_ALLOW_NET` | — | Comma-separated CIDR ranges to allow stats access from (e.g. `100.64.0.0/10,fd00::/8`) |

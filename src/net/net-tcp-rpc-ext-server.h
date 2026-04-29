@@ -98,7 +98,10 @@ void tcp_rpcs_account_bytes (int secret_id, unsigned ip, const unsigned char *ip
 void tcp_rpcs_snapshot_top_ips (int secret_id, struct worker_top_ip *out,
                                 int *out_count, int max);
 
-void tcp_rpc_add_proxy_domain (const char *domain);
+/* Register a fake-TLS domain. `backend` is optional: NULL/empty means the
+   camouflage traffic is forwarded back to the SNI domain itself (legacy).
+   When set, it can be host:port or unix:/path for an off-host or local backend. */
+void tcp_rpc_add_proxy_domain (const char *name, const char *backend);
 
 void tcp_rpc_init_proxy_domains();
 

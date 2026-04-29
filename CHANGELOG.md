@@ -6,6 +6,11 @@
   through an outbound HTTP/SOCKS proxy (#61). Useful when `core.telegram.org`
   is unreachable directly from the host. Defaults to `SOCKS5_PROXY` when
   unset, so a single knob can cover both DC routing and config refresh.
+- New `EE_BACKEND` env var splits the fake-TLS SNI domain (`EE_DOMAIN`) from
+  the actual camouflage backend (#62). Avoids the `/etc/hosts` workaround for
+  local backends, and supports unix sockets (`EE_BACKEND=unix:/run/nginx.sock`)
+  for nginx fronts. Configurable in TOML as
+  `domain = [{ name = "...", backend = "..." }]`.
 
 ## [4.12.2]
 

@@ -130,6 +130,9 @@ PROXY_TAG=${PROXY_TAG:-}
 RANDOM_PADDING=${RANDOM_PADDING:-}
 # Domain or host:port for TLS-transport mode (e.g. google.com or 127.0.0.1:8443)
 EE_DOMAIN=${EE_DOMAIN:-}
+# Optional separate backend for fake-TLS camouflage. Lets EE_DOMAIN stay a
+# clean SNI name while traffic forwards to host:port or unix:/path locally.
+EE_BACKEND=${EE_BACKEND:-}
 # Max connections per worker — keep modest for low-memory machines.
 # Raise via MAX_CONNECTIONS env var on high-memory servers (hard limit: 65536).
 MAX_CONNECTIONS=${MAX_CONNECTIONS:-10000}
@@ -186,7 +189,11 @@ TOML_CONFIG="data/config.toml"
     fi
 
     if [ -n "$EE_DOMAIN" ]; then
-        echo "domain = \"$EE_DOMAIN\""
+        if [ -n "$EE_BACKEND" ]; then
+            echo "domain = [{ name = \"$EE_DOMAIN\", backend = \"$EE_BACKEND\" }]"
+        else
+            echo "domain = \"$EE_DOMAIN\""
+        fi
     fi
 
     if [ -n "$BIND_ADDRESS" ]; then

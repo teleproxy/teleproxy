@@ -1383,7 +1383,7 @@ int f_parse_option (int val) {
     mtproto_front_functions.flags &= ~ENGINE_NO_PORT;
     break;
   case 'D':
-    tcp_rpc_add_proxy_domain (optarg);
+    tcp_rpc_add_proxy_domain (optarg, NULL);
     domain_count++;
     break;
   case 'S':
@@ -1648,7 +1648,8 @@ void mtfront_pre_init (void) {
       ip_acl_add_stats_net (toml_cfg.stats_allow_nets[i]);
     }
     for (int i = 0; i < toml_cfg.domain_count; i++) {
-      tcp_rpc_add_proxy_domain (toml_cfg.domains[i]);
+      tcp_rpc_add_proxy_domain (toml_cfg.domains[i].name,
+                                toml_cfg.domains[i].backend[0] ? toml_cfg.domains[i].backend : NULL);
       domain_count++;
     }
     for (int i = 0; i < toml_cfg.dc_override_count; i++) {
