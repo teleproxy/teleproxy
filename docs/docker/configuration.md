@@ -28,6 +28,7 @@ description: "Complete reference for Teleproxy Docker environment variables: sec
 | `IP_ALLOWLIST` | — | Path to CIDR allowlist file |
 | `STATS_ALLOW_NET` | — | Comma-separated CIDR ranges to allow stats access from (e.g. `100.64.0.0/10,fd00::/8`) |
 | `SOCKS5_PROXY` | — | Route upstream DC connections through a SOCKS5 proxy (`socks5://[user:pass@]host:port`) |
+| `CONFIG_DOWNLOAD_PROXY` | `$SOCKS5_PROXY` | Outbound proxy for fetching `proxy-multi.conf` from `core.telegram.org`. Accepts any URL `curl -x` understands (`http://`, `https://`, `socks5://`, `socks5h://`). Defaults to `SOCKS5_PROXY` if unset |
 | `PROXY_PROTOCOL` | false | Enable PROXY protocol v1/v2 on client listeners (for HAProxy/nginx/NLB) |
 | `DC_OVERRIDE` | — | Comma-separated DC address overrides for direct mode (e.g. `2:1.2.3.4:443,2:5.6.7.8:443`) |
 | `MAX_CONNECTIONS` | 10000 | Maximum file descriptors (≈ connections) per worker. Raise on high-memory servers, lower on constrained ones. Hard limit: 65536 |
@@ -76,6 +77,14 @@ If `core.telegram.org` is unreachable, the container uses the cached config from
 ## Automatic Config Refresh
 
 A cron job refreshes the Telegram DC configuration every 6 hours. It downloads the latest config, validates it, compares it with the existing one, and hot-reloads the proxy via `SIGHUP` if the config changed. No configuration needed.
+
+If direct connections to `core.telegram.org` are blocked from the host, set `CONFIG_DOWNLOAD_PROXY` to route the download through an outbound proxy:
+
+```bash
+docker run -d -e CONFIG_DOWNLOAD_PROXY=socks5://10.0.0.1:1080 ... ghcr.io/teleproxy/teleproxy:latest
+```
+
+When unset, falls back to `SOCKS5_PROXY` if that's configured for upstream DC routing.
 
 ## Health Check
 

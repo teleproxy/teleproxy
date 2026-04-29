@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+- New `CONFIG_DOWNLOAD_PROXY` env var routes the `proxy-multi.conf` download
+  through an outbound HTTP/SOCKS proxy (#61). Useful when `core.telegram.org`
+  is unreachable directly from the host. Defaults to `SOCKS5_PROXY` when
+  unset, so a single knob can cover both DC routing and config refresh.
+
 ## [4.12.2]
 
 Build hygiene. No runtime changes.

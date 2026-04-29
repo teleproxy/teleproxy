@@ -38,9 +38,20 @@ if [ "$DIRECT_MODE" != "true" ]; then
     fi
 
     PROXY_CONFIG_URL=${PROXY_CONFIG_URL:-https://core.telegram.org/getProxyConfig}
+    # Download via outbound proxy when core.telegram.org is unreachable directly.
+    # Falls back to SOCKS5_PROXY (the DC-routing proxy) so a single knob covers both.
+    CONFIG_DOWNLOAD_PROXY=${CONFIG_DOWNLOAD_PROXY:-${SOCKS5_PROXY:-}}
+    _proxy_arg=""
+    if [ -n "$CONFIG_DOWNLOAD_PROXY" ]; then
+        _proxy_arg="-x $CONFIG_DOWNLOAD_PROXY"
+    fi
     if [ "$NEEDS_DOWNLOAD" -eq 1 ]; then
-        echo "Downloading proxy config from $PROXY_CONFIG_URL..."
-        if curl --connect-timeout 10 --max-time 30 --retry 3 --retry-delay 2 -fsSL "$PROXY_CONFIG_URL" -o "$CONFIG_PATH.tmp"; then
+        if [ -n "$_proxy_arg" ]; then
+            echo "Downloading proxy config from $PROXY_CONFIG_URL via $CONFIG_DOWNLOAD_PROXY..."
+        else
+            echo "Downloading proxy config from $PROXY_CONFIG_URL..."
+        fi
+        if curl --connect-timeout 10 --max-time 30 --retry 3 --retry-delay 2 -fsSL $_proxy_arg "$PROXY_CONFIG_URL" -o "$CONFIG_PATH.tmp"; then
             mv "$CONFIG_PATH.tmp" "$CONFIG_PATH"
             echo "Proxy config downloaded successfully."
         else

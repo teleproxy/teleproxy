@@ -4,6 +4,10 @@ description: "Release history for Teleproxy. Version details, new features, bug 
 
 # Changelog
 
+## Unreleased
+
+- **`CONFIG_DOWNLOAD_PROXY` env var for the proxy-multi.conf download** ([#61](https://github.com/teleproxy/teleproxy/issues/61)). Hosts that can't reach `core.telegram.org` directly can now route the config refresh through an outbound HTTP or SOCKS proxy. Accepts any URL `curl -x` understands (`http://`, `https://`, `socks5://`, `socks5h://`, with optional `user:pass@`). Falls back to `SOCKS5_PROXY` when unset, so users who already proxy DC traffic don't need to set anything new. Applies to the initial fetch in `start.sh` and the 6-hour cron refresh.
+
 ## 4.12.2
 
 Build hygiene release. No runtime changes.
