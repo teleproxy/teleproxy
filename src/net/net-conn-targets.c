@@ -303,7 +303,7 @@ static conn_target_job_t find_target_ipv6 (unsigned char ad_ipv6[16], int port, 
 static int free_target (conn_target_job_t CTJ) {
   pthread_mutex_lock (&TargetsLock);
   struct conn_target_info *CT = CONN_TARGET_INFO (CTJ);
-  if (CT->global_refcnt > 0 || CT->conn_tree) {
+  if (!CT || CT->global_refcnt > 0 || CT->conn_tree) {
     pthread_mutex_unlock (&TargetsLock);
     return -1;
   }
