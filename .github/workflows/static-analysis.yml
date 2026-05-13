@@ -20,15 +20,20 @@ jobs:
 
   dashboard-lint:
     runs-on: ubuntu-latest
+    env:
+      DASHBOARD_LINTER_VERSION: "0.1.0"
+      DASHBOARD_LINTER_SHA256: "a51970b1b7db199a1e557fcf8442e2c65dd8341df05d06cb7bd699206c7c5bbd"
     steps:
     - uses: actions/checkout@v4
 
-    - uses: actions/setup-go@v5
-      with:
-        go-version: 'stable'
-
     - name: Install dashboard-linter
-      run: go install github.com/grafana/dashboard-linter@latest
+      run: |
+        url="https://github.com/grafana/dashboard-linter/releases/download/v${DASHBOARD_LINTER_VERSION}/dashboard-linter_${DASHBOARD_LINTER_VERSION}_linux_amd64.tar.gz"
+        curl -sSfL "$url" -o dashboard-linter.tar.gz
+        echo "${DASHBOARD_LINTER_SHA256}  dashboard-linter.tar.gz" | sha256sum -c -
+        tar -xzf dashboard-linter.tar.gz dashboard-linter
+        sudo install -m 0755 dashboard-linter /usr/local/bin/dashboard-linter
+        rm -f dashboard-linter.tar.gz dashboard-linter
 
     - name: Lint Grafana dashboards
       run: |
