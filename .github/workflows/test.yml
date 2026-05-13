@@ -186,9 +186,13 @@ jobs:
         fetch-depth: 0
 
     - name: Install Dependencies
+      uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: libssl-dev zlib1g-dev vim-common netcat-openbsd libunwind-dev
+        version: 1.0
+
+    - name: Set up Python venv
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libssl-dev zlib1g-dev git curl vim-common python3 python3-pip python3-venv netcat-openbsd libunwind-dev
         python3 -m venv .venv
         source .venv/bin/activate
         pip install requests telethon
