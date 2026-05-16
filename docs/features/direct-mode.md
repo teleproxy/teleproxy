@@ -22,7 +22,17 @@ In direct mode:
 - No `proxy-multi.conf` or `proxy-secret` files needed
 - No config file argument required
 - Connects directly to well-known Telegram DC addresses
-- **Incompatible with `-P` (proxy tag)** — promoted channels require ME relays
+- **Incompatible with `-P` (proxy tag)** — promotion-tag accounting happens at Telegram's middle-end, so promoted-channel slots require ME relays
+
+## Limitations
+
+Direct mode skips Telegram's middle-end (MiddleProxy) by design. That trade-off costs three things on the client side:
+
+- **Media on non-Premium accounts may not load.** Photos, videos, and stories for free-tier accounts are gated by Telegram on session authorization that happens through MiddleProxy; sessions established via direct mode are treated as un-authorized for that media and the client sees indefinite "loading" rather than a clean error. Premium accounts are unaffected. This is the symptom users report in [#60](https://github.com/teleproxy/teleproxy/issues/60).
+- **Sponsored / promoted channels are not delivered.** Same reason — promotion tags are issued by ME.
+- **Telegram voice/video calls are never carried by any MTProto proxy** — direct or relay. The Telegram client only honours an in-app SOCKS5 proxy for the call signalling path; MTProto proxies only see chat traffic. This isn't direct-mode-specific, but it's worth knowing when picking a deployment shape.
+
+If media matters more than the latency win, drop `--direct` and run with `proxy-multi.conf` + `proxy-secret` (the default ME-relay path).
 
 Docker:
 
