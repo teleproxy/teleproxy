@@ -683,6 +683,9 @@ static void add_public_key (unsigned char *str, int *pos) {
 
 static unsigned char *create_request (const char *domain) {
   unsigned char *result = malloc (TLS_REQUEST_LENGTH);
+  if (result == NULL) {
+    return NULL;
+  }
   int pos = 0;
 
 #define MAX_GREASE 7
@@ -831,9 +834,15 @@ static int update_domain_info (struct domain_info *info) {
     }
   }
 
-  unsigned char *requests[TRIES];
+  int have_error = 0;
+  unsigned char *requests[TRIES] = {};
   for (i = 0; i < TRIES; i++) {
     requests[i] = create_request (info->domain);
+    if (requests[i] == NULL) {
+      kprintf ("Failed to allocate request buffer for checking domain %s\n", domain);
+      have_error = 1;
+      break;
+    }
   }
   unsigned char *responses[TRIES] = {};
   int response_len[TRIES] = {};
@@ -848,7 +857,6 @@ static int update_domain_info (struct domain_info *info) {
   int is_reversed_extension_order_max = 0;
   int all_record_counts[TRIES] = {};
   int all_total_encrypted[TRIES] = {};
-  int have_error = 0;
   while (get_utime_monotonic() < finish_time && finished_count < TRIES && !have_error) {
     struct timeval timeout_data;
     timeout_data.tv_sec = (int)(finish_time - precise_now + 1);
@@ -897,6 +905,11 @@ static int update_domain_info (struct domain_info *info) {
           }
           response_len[i] = 5 + header[3] * 256 + header[4] + 6 + 5;
           responses[i] = malloc (response_len[i]);
+          if (responses[i] == NULL) {
+            kprintf ("Failed to allocate response buffer for checking domain %s\n", domain);
+            have_error = 1;
+            break;
+          }
           memcpy (responses[i], header, sizeof (header));
           read_pos[i] = 5;
         } else {
