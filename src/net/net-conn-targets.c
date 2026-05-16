@@ -308,7 +308,7 @@ static int free_target (conn_target_job_t CTJ) {
     return -1;
   }
 
-  assert (CT && CT->type && !CT->global_refcnt);
+  assert (CT->type && !CT->global_refcnt);
   assert (!CT->conn_tree);
   if (CT->target.s_addr) {
     vkprintf (1, "Freeing unused target to %s:%d\n", inet_ntoa (CT->target), CT->port);
