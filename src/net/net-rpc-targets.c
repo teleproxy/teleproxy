@@ -85,6 +85,7 @@ MODULE_STAT_FUNCTION_END
 static rpc_target_job_t rpc_target_alloc (struct process_id PID) {
   assert_engine_thread ();
   rpc_target_job_t SS = calloc (sizeof (struct async_job) + sizeof (struct rpc_target_info), 1);
+  assert (SS);
   struct rpc_target_info *S = RPC_TARGET_INFO (SS);
   
   S->PID = PID;

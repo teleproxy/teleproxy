@@ -105,6 +105,7 @@ void notification_event_job_create (void) {
 
 void notification_event_insert_conn (connection_job_t C, int type) {
   struct notification_event *ev = malloc (sizeof (*ev));
+  assert (ev);
   ev->who = job_incref (C);
   ev->type = type;
 

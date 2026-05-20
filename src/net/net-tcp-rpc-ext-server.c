@@ -147,6 +147,7 @@ int tcp_proxy_pass_parse_execute (connection_job_t C) {
   struct connection_info *e = CONN_INFO(E);
 
   struct raw_message *r = malloc (sizeof (*r));
+  assert (r);
   rwm_move (r, &c->in);
   rwm_init (&c->in, 0);
   vkprintf (3, "proxying %d bytes to %s:%d\n", r->total_bytes, show_remote_ip (E), e->remote_port);
@@ -1135,6 +1136,7 @@ static int have_client_random (unsigned char random[16]) {
 
 static void add_client_random (unsigned char random[16]) {
   struct client_random *entry = malloc (sizeof (struct client_random));
+  assert (entry);
   memcpy (entry->random, random, 16);
   entry->time = now;
   entry->next_by_time = NULL;

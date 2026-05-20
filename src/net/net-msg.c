@@ -70,7 +70,7 @@ MODULE_STAT_FUNCTION
 MODULE_STAT_FUNCTION_END
 
 
-static inline struct msg_part *alloc_msg_part (void) { MODULE_STAT->rwm_total_msg_parts ++; struct msg_part *mp = (struct msg_part *) malloc (sizeof (struct msg_part)); mp->magic = MSG_PART_MAGIC; return mp; }
+static inline struct msg_part *alloc_msg_part (void) { MODULE_STAT->rwm_total_msg_parts ++; struct msg_part *mp = (struct msg_part *) malloc (sizeof (struct msg_part)); assert (mp); mp->magic = MSG_PART_MAGIC; return mp; }
 static inline void free_msg_part (struct msg_part *mp) { MODULE_STAT->rwm_total_msg_parts --; assert (mp->magic == MSG_PART_MAGIC); free (mp); }
 
 struct msg_part *new_msg_part (struct msg_part *neighbor, struct msg_buffer *X) /* {{{ */{

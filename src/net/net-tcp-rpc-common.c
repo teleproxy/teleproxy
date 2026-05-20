@@ -47,6 +47,7 @@ void tcp_rpc_conn_send_init (connection_job_t C, struct raw_message *raw, int fl
   Q[0] = raw->total_bytes + 12;
   Q[1] = TCP_RPC_DATA(C)->out_packet_num ++;
   struct raw_message *r = malloc (sizeof (*r));
+  assert (r);
   if (flags & 1) {
     rwm_clone (r, raw);
   } else {
@@ -72,6 +73,7 @@ void tcp_rpc_conn_send_im (JOB_REF_ARG (C), struct raw_message *raw, int flags) 
   Q[0] = raw->total_bytes + 12;
   Q[1] = TCP_RPC_DATA(C)->out_packet_num ++;
   struct raw_message *r = malloc (sizeof (*r));
+  assert (r);
   if (flags & 1) {
     rwm_clone (r, raw);
   } else {
@@ -99,6 +101,7 @@ void tcp_rpc_conn_send (JOB_REF_ARG (C), struct raw_message *raw, int flags) {
     assert (!(flags & 1));
   } else {
     r = malloc (sizeof (*r));
+    assert (r);
     if (flags & 1) {
       rwm_clone (r, raw);
     } else {

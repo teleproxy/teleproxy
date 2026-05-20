@@ -268,6 +268,7 @@ static int tcp_direct_relay (connection_job_t C) {
   struct connection_info *e = CONN_INFO(E);
 
   struct raw_message *r = malloc (sizeof (*r));
+  assert (r);
   rwm_move (r, &c->in);
   rwm_init (&c->in, 0);
   vkprintf (3, "direct relay %d bytes to %s:%d\n", r->total_bytes, show_remote_ip (E), e->remote_port);
