@@ -386,6 +386,7 @@ static int process_act_atom_subjob (job_t job, int op, struct job_thread *JT) /*
       if (res >= 0 && !IO->error) {
         //assert (TL_OUT_RAW_MSG);
         struct raw_message *raw = malloc (sizeof (*raw));
+        assert (raw);
         rwm_clone (raw, (struct raw_message *)IO->out);
         tl_out_state_free (IO);
         if (E->raw) {

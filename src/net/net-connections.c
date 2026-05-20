@@ -837,6 +837,7 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
     }
 
     struct raw_message *in = malloc (sizeof (*in));
+    assert (in);
     rwm_init (in, 0);
     
     int s = tcp_recv_buffers_total_size;

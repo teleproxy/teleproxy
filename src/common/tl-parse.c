@@ -170,6 +170,7 @@ static inline void __tl_raw_msg_fetch_lookup_raw_message (struct tl_in_state *tl
 static inline void __tl_raw_msg_fetch_mark (struct tl_in_state *tlio_in) {
   assert (!TL_IN_MARK);
   struct raw_message *T = malloc (sizeof (*T));
+  assert (T);
   rwm_clone (T, TL_IN_RAW_MSG);
   TL_IN_MARK = T;
   TL_IN_MARK_POS = TL_IN_POS;
@@ -579,6 +580,9 @@ int __tl_fetch_init (struct tl_in_state *tlio_in, void *in, void *in_extra, enum
 
 int tlf_init_raw_message (struct tl_in_state *tlio_in, struct raw_message *msg, int size, int dup) {
   struct raw_message *r = (struct raw_message *)malloc (sizeof (*r));
+  if (!r) {
+    return -1;
+  }
   if (dup == 0) {
     rwm_move (r, msg);
   } else if (dup == 1) {
@@ -798,6 +802,9 @@ int tls_init_tcp_raw_msg (struct tl_out_state *tlio_out, JOB_REF_ARG(c), long lo
   struct raw_message *d = 0;
   if (c) {
     d = (struct raw_message *)malloc (sizeof (*d));
+    if (!d) {
+      return -1;
+    }
     rwm_init (d, 0);
   }
   return __tl_store_init (tlio_out, d, c, tl_type_tcp_raw_msg, &tl_out_tcp_raw_msg_methods, (1 << 27), qid);
@@ -812,6 +819,9 @@ int tls_init_tcp_raw_msg_unaligned (struct tl_out_state *tlio_out, JOB_REF_ARG(c
   struct raw_message *d = 0;
   if (c) {
     d = (struct raw_message *)malloc (sizeof (*d));
+    if (!d) {
+      return -1;
+    }
     rwm_init (d, 0);
   }
   return __tl_store_init (tlio_out, d, c, tl_type_tcp_raw_msg, &tl_out_tcp_raw_msg_unaligned_methods, (1 << 27), qid);
@@ -823,7 +833,10 @@ int tls_init_str (struct tl_out_state *tlio_out, char *s, long long qid, int siz
 }
 
 int tls_init_raw_msg_nosend (struct tl_out_state *tlio_out) {
-  struct raw_message *d = (struct raw_message *)malloc (sizeof (*d));  
+  struct raw_message *d = (struct raw_message *)malloc (sizeof (*d));
+  if (!d) {
+    return -1;
+  }
   rwm_init (d, 0);
   return __tl_store_init (tlio_out, d, d, tl_type_raw_msg, &tl_out_raw_msg_methods_nosend, (1 << 27), 0);
 }
