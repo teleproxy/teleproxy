@@ -516,6 +516,7 @@ void tcp_rpcs_set_ext_rand_pad_only(int set) {
 int allow_only_tls;
 struct domain_info *default_domain_info;
 struct domain_info *domains[DOMAIN_HASH_MOD];
+struct domain_info *wildcard_domains;
 
 struct domain_info **get_domain_info_bucket (const char *domain, size_t len) {
   size_t i;
@@ -533,6 +534,11 @@ static const struct domain_info *get_domain_info (const char *domain, size_t len
       return info;
     }
     info = info->next;
+  }
+  for (info = wildcard_domains; info != NULL; info = info->next) {
+    if (wildcard_match (info->domain, domain, len)) {
+      return info;
+    }
   }
   return NULL;
 }
@@ -750,9 +756,17 @@ static int update_domain_info (struct domain_info *info) {
   }
 
   /* Connect to the camouflage backend for fingerprinting; falls back to the
-     SNI domain itself when no separate backend is configured. */
+     SNI domain itself when no separate backend is configured.
+
+     For wildcard entries (info->domain starts with '*'), we always have an
+     explicit backend (enforced at registration) and use it for both the
+     TCP target and the probe SNI.  Sending SNI "*.example.com" to nginx
+     would land on the default vhost; the backend hostname is the real
+     name the operator wants fingerprinted. */
+  int is_wildcard = info->domain[0] == '*';
   const char *domain = info->domain;
   const char *host_str = info->backend_host ? info->backend_host : domain;
+  const char *probe_sni = is_wildcard ? host_str : domain;
 
   struct in_addr addr4;
   struct in6_addr addr6;
@@ -838,7 +852,7 @@ static int update_domain_info (struct domain_info *info) {
   int have_error = 0;
   unsigned char *requests[TRIES] = {};
   for (i = 0; i < TRIES; i++) {
-    requests[i] = create_request (info->domain);
+    requests[i] = create_request (probe_sni);
     if (requests[i] == NULL) {
       kprintf ("Failed to allocate request buffer for checking domain %s\n", domain);
       have_error = 1;
@@ -1079,21 +1093,27 @@ static const struct domain_info *get_sni_domain_info (const unsigned char *reque
   return info;
 }
 
+static void init_one_domain (struct domain_info *info) {
+  if (!update_domain_info (info)) {
+    kprintf ("Failed to update response data about %s, so default response settings wiil be used\n", info->domain);
+    // keep target addresses as is
+    info->is_reversed_extension_order = 0;
+    info->use_random_encrypted_size = 1;
+    info->server_hello_encrypted_size = 2500 + rand() % 1120;
+  }
+}
+
 void tcp_rpc_init_proxy_domains() {
   int i;
   for (i = 0; i < DOMAIN_HASH_MOD; i++) {
-    struct domain_info *info = domains[i];
-    while (info != NULL) {
-      if (!update_domain_info (info)) {
-        kprintf ("Failed to update response data about %s, so default response settings wiil be used\n", info->domain);
-        // keep target addresses as is
-        info->is_reversed_extension_order = 0;
-        info->use_random_encrypted_size = 1;
-        info->server_hello_encrypted_size = 2500 + rand() % 1120;
-      }
-
-      info = info->next;
+    struct domain_info *info;
+    for (info = domains[i]; info != NULL; info = info->next) {
+      init_one_domain (info);
     }
+  }
+  struct domain_info *info;
+  for (info = wildcard_domains; info != NULL; info = info->next) {
+    init_one_domain (info);
   }
 }
 

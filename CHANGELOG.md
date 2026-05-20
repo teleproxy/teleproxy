@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Wildcard certificate support in fake-TLS mode (#44). `-D '*.example.com:backend:443'`
+  matches any single-label subdomain of `example.com` against the configured
+  SNI pattern (RFC 6125), fixing the failure mode where operators with a
+  `*.example.com` cert saw fake-TLS traffic land on nginx's default vhost.
+  Fingerprinting probes the backend host, not the literal `*.example.com`.
+  Same bug filed against mtg as 9seconds/mtg#394; teleproxy is now the first
+  MTProxy implementation to handle wildcards.
 - New `CONFIG_DOWNLOAD_PROXY` env var routes the `proxy-multi.conf` download
   through an outbound HTTP/SOCKS proxy (#61). Useful when `core.telegram.org`
   is unreachable directly from the host. Defaults to `SOCKS5_PROXY` when

@@ -59,6 +59,10 @@ Choose a popular, CDN-backed domain for SNI (e.g., `www.google.com`, `cloudflare
 
 If you control the server's domain, set up nginx with a valid TLS certificate behind Teleproxy. This makes the server indistinguishable from a normal HTTPS website under active probing. See [Fake-TLS: Custom TLS Backend](fake-tls.md#custom-tls-backend-tcp-splitting).
 
+### Wildcard certificates
+
+If your TLS certificate is a wildcard (e.g. `*.example.com` served from `proxy.example.com`), configure the `-D` flag with the wildcard pattern: `-D '*.example.com:proxy.example.com:443'`. Teleproxy matches any single-label subdomain of `example.com` against the pattern (RFC 6125): `proxy.example.com` and `node-7.example.com` match; `example.com` (apex) and `a.b.example.com` (multi-label) do not. Fingerprinting at startup probes the backend host, not the literal `*.example.com`. An explicit backend is required for wildcard entries.
+
 ### Use random padding (DD mode)
 
 For ISPs that fingerprint MTProto by packet sizes, enable random padding by prefixing `dd` to the client secret.

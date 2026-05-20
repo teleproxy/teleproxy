@@ -1,0 +1,59 @@
+services:
+  tls-backend:
+    build: ./tls-backend-wildcard
+    networks:
+      tlsnet:
+        ipv4_address: 172.31.0.10
+    healthcheck:
+      test: ["CMD-SHELL", "echo Q | openssl s_client -connect localhost:443 2>/dev/null | grep -q 'Verify return code'"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 3s
+
+  teleproxy:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        DEBUG_TOOLS: "1"
+    environment:
+      - SECRET=${TELEPROXY_SECRET:-d41d8cd98f00b204e9800998ecf8427e}
+      - PORT=8443
+      - STATS_PORT=8888
+      # Wildcard SNI configuration: the proxy fingerprints the backend
+      # (probe SNI is the backend literal, so a pinned IP is fine — nginx
+      # still serves the *.example.com cert via default_server) and matches
+      # any single-label subdomain of example.com against the pattern.
+      # The IP is used for the connect target to avoid Docker DNS races
+      # during the early fingerprint probe (same pattern as test-tls).
+      - EE_DOMAIN=*.example.com
+      - EE_BACKEND=172.31.0.10:443
+      - WORKERS=0
+    networks:
+      - tlsnet
+    depends_on:
+      tls-backend:
+        condition: service_healthy
+
+  tester:
+    build: .
+    environment:
+      - TELEPROXY_HOST=teleproxy
+      - TELEPROXY_PORT=8443
+      - TELEPROXY_STATS_PORT=8888
+      - TELEPROXY_SECRET=${TELEPROXY_SECRET:-d41d8cd98f00b204e9800998ecf8427e}
+      - TLS_BACKEND_HOST=tls-backend
+      - TLS_BACKEND_PORT=443
+    networks:
+      - tlsnet
+    depends_on:
+      - teleproxy
+    command: ["python", "test_wildcard_cert.py"]
+
+networks:
+  tlsnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24

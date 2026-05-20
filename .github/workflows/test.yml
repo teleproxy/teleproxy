@@ -80,6 +80,15 @@ jobs:
         fi
         make test-tls
 
+    - name: Run Wildcard Cert Tests
+      env:
+        TELEPROXY_SECRET: ${{ secrets.TELEPROXY_SECRET }}
+      run: |
+        if [ -z "$TELEPROXY_SECRET" ]; then
+          export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
+        fi
+        make test-wildcard-cert
+
     - name: Run Multi-Secret Tests
       run: make test-multi-secret
 
@@ -180,6 +189,11 @@ jobs:
       run: |
         export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
         make test-tls
+
+    - name: Run Wildcard Cert Tests (ARM64)
+      run: |
+        export TELEPROXY_SECRET=$(head -c 16 /dev/urandom | xxd -ps)
+        make test-wildcard-cert
 
   test-native-build:
     runs-on: ubuntu-latest
