@@ -718,6 +718,7 @@ int parse_engine_options_long (int argc, char **argv) {
   char *shortopts = malloc (total_shortopts_len + 1);
   assert (shortopts);
   struct option *longopts = malloc ((total_longopts + 1) * sizeof (struct option));
+  assert (longopts);
   int lpos = 0;
   int spos = 0;
 

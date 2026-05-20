@@ -104,6 +104,9 @@ struct tl_query_header *tl_query_header_dup (struct tl_query_header *h) {
   
 struct tl_query_header *tl_query_header_clone (struct tl_query_header *h_old) {
   struct tl_query_header *h = malloc (sizeof (*h));
+  if (!h) {
+    return NULL;
+  }
   memcpy (h, h_old, sizeof (*h));
   h->ref_cnt = 1;
   return h;
@@ -778,6 +781,9 @@ int tls_init_raw_msg (struct tl_out_state *tlio_out, struct process_id *pid, lon
   struct raw_message *d = 0;
   if (pid) {
     d = (struct raw_message *)malloc (sizeof (*d));
+    if (!d) {
+      return -1;
+    }
     rwm_init (d, 0);
   }
   return __tl_store_init (tlio_out, d, NULL, tl_type_raw_msg, &tl_out_raw_msg_methods, (1 << 27), qid);
