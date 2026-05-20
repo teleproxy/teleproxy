@@ -156,6 +156,7 @@ clean:
 
 lint:
 	cppcheck --enable=warning,portability,performance \
+	  --check-level=exhaustive \
 	  --error-exitcode=1 \
 	  --suppressions-list=.cppcheck-suppressions \
 	  --suppress=missingIncludeSystem \

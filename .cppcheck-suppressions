@@ -39,4 +39,3 @@ invalidPrintfArgType_sint:src/net/net-events.c
 
 // Informational — not errors.
 toomanyconfigs
-normalCheckLevelMaxBranches
