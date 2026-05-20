@@ -296,6 +296,7 @@ int process_http_query (struct tl_in_state *tlio_in, job_t HQJ) {
       int len = snprintf (response_buffer, 511, "HTTP/1.1 200 OK\r\nConnection: %s\r\nContent-type: text/plain\r\nPragma: no-cache\r\nCache-control: no-store\r\n%sContent-length: 0\r\n\r\n", (HTS_DATA(c)->query_flags & QF_KEEPALIVE) ? "keep-alive" : "close", HTS_DATA(c)->query_flags & QF_EXTRA_HEADERS ? mtproto_cors_http_headers : "");
       assert (len < 511);
       struct raw_message *m = calloc (sizeof (struct raw_message), 1);
+      assert (m);
       rwm_create (m, response_buffer, len);
       http_flush (c, m);
       return 0;
@@ -442,6 +443,10 @@ int hts_stats_execute (connection_job_t c, struct raw_message *msg, int op) {
   }
 
   struct raw_message *raw = calloc (sizeof (*raw), 1);
+  if (!raw) {
+    sb_release (&sb);
+    return -1;
+  }
   rwm_init (raw, 0);
   write_basic_http_header_raw (c, raw, 200, 0, sb.pos, 0, content_type);
   if (rwm_push_data (raw, sb.buff, sb.pos) != sb.pos) {
@@ -636,7 +641,8 @@ int http_send_message (JOB_REF_ARG (C), struct tl_in_state *tlio_in, int flags) 
     char response_buffer[512];
     TLS_START_UNALIGN (JOB_REF_CREATE_PASS (C)) {
       int len = TL_IN_REMAINING;
-      tl_store_raw_data (response_buffer, snprintf (response_buffer, sizeof (response_buffer) - 1, "HTTP/1.1 200 OK\r\nConnection: %s\r\nContent-type: application/octet-stream\r\nPragma: no-cache\r\nCache-control: no-store\r\n%sContent-length: %d\r\n\r\n", (D->query_flags & QF_KEEPALIVE) ? "keep-alive" : "close", D->query_flags & QF_EXTRA_HEADERS ? mtproto_cors_http_headers : "", len));
+      int header_len = snprintf (response_buffer, sizeof (response_buffer) - 1, "HTTP/1.1 200 OK\r\nConnection: %s\r\nContent-type: application/octet-stream\r\nPragma: no-cache\r\nCache-control: no-store\r\n%sContent-length: %d\r\n\r\n", (D->query_flags & QF_KEEPALIVE) ? "keep-alive" : "close", D->query_flags & QF_EXTRA_HEADERS ? mtproto_cors_http_headers : "", len);
+      tl_store_raw_data (response_buffer, header_len);
       assert (tl_copy_through (tlio_in, tlio_out, len, 1) == len);
     } TLS_END;
   }
