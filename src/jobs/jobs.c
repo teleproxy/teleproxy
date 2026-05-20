@@ -580,8 +580,10 @@ int create_job_class_sub (int job_class, int min_threads, int max_threads, int e
   assert (min_threads >= 0 && max_threads >= min_threads);
 
   struct job_subclass_list *L = calloc (sizeof (*L), 1);
+  assert (L);
   L->subclass_cnt = subclass_cnt;
   L->subclasses = calloc (sizeof (struct job_subclass), subclass_cnt + 2);
+  assert (L->subclasses);
   L->subclasses += 2;
   int i;
   for (i = -2; i < subclass_cnt; i++) {
@@ -1498,6 +1500,7 @@ void job_message_queue_free (job_t job) {
 
 void job_message_queue_init (job_t job) {
   struct job_message_queue *q = calloc (sizeof (*q), 1);
+  assert (q);
   q->unsorted = alloc_mp_queue_w ();
   job_message_queue_set (job, q);
 }
@@ -1515,6 +1518,7 @@ void job_message_free_default (struct job_message *M) {
 void job_message_send (JOB_REF_ARG (job), JOB_REF_ARG (src), unsigned int type, struct raw_message *raw, int dup, int payload_ints, const unsigned int *payload, unsigned int flags, void (*destroy)(struct job_message *)) {
   assert (job->j_type & JT_HAVE_MSG_QUEUE);
   struct job_message *M = malloc (sizeof (*M) + payload_ints * 4);
+  assert (M);
   M->type = type;
   M->flags = 0;
   M->src = PTR_MOVE (src);
@@ -1560,6 +1564,7 @@ void job_message_send_data (JOB_REF_ARG (job), JOB_REF_ARG (src), unsigned int t
 void job_message_send_fake (JOB_REF_ARG (job), int (*receive_message)(job_t job, struct job_message *M, void *extra), void *extra, JOB_REF_ARG (src), unsigned int type, struct raw_message *raw, int dup, int payload_ints, const unsigned int *payload, unsigned int flags, void (*destroy)(struct job_message *)) {
   assert (job->j_type & JT_HAVE_MSG_QUEUE);
   struct job_message *M = malloc (sizeof (*M) + payload_ints * 4);
+  assert (M);
   M->type = type;
   M->flags = 0;
   M->src = PTR_MOVE (src);
@@ -1679,6 +1684,7 @@ static int notify_job_receive_message (job_t NJ, struct job_message *M, void *ex
         complete_subjob (NJ, JOB_REF_PASS (M->src), JSP_PARENT_RWE);
       } else {
         struct notify_job_subscriber *S = malloc (sizeof (*S));
+        assert (S);
         S->job = PTR_MOVE (M->src);
         S->next = NULL;
         if (N->last) {

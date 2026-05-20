@@ -417,6 +417,9 @@ struct job_message_payload {
 
 static inline struct job_message_payload *job_message_payload_alloc (JOB_REF_ARG (job), int message_class, int payload_ints, unsigned int *payload) {
   struct job_message_payload *P = malloc (sizeof (*P) + 4 * payload_ints);
+  if (!P) {
+    return NULL;
+  }
   P->message_class = message_class;
   P->payload_ints = payload_ints;
   P->job = PTR_MOVE (job);
