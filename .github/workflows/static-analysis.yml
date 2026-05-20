@@ -9,11 +9,34 @@ on:
 jobs:
   cppcheck:
     runs-on: ubuntu-latest
+    env:
+      CPPCHECK_VERSION: "2.20.0"
     steps:
     - uses: actions/checkout@v4
 
+    - name: Cache cppcheck build
+      id: cache-cppcheck
+      uses: actions/cache@v4
+      with:
+        path: /opt/cppcheck
+        key: cppcheck-${{ env.CPPCHECK_VERSION }}-ubuntu-latest
+
+    - name: Build cppcheck from source
+      if: steps.cache-cppcheck.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update && sudo apt-get install -y build-essential cmake
+        git clone --depth 1 --branch "$CPPCHECK_VERSION" https://github.com/danmar/cppcheck.git /tmp/cppcheck
+        cmake -S /tmp/cppcheck -B /tmp/cppcheck/build \
+          -DUSE_MATCHCOMPILER=ON \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/opt/cppcheck
+        cmake --build /tmp/cppcheck/build -j"$(nproc)"
+        cmake --install /tmp/cppcheck/build
+
     - name: Install cppcheck
-      run: sudo apt-get update && sudo apt-get install -y cppcheck
+      run: |
+        echo "/opt/cppcheck/bin" >> "$GITHUB_PATH"
+        /opt/cppcheck/bin/cppcheck --version
 
     - name: Run cppcheck
       run: make lint
