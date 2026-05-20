@@ -566,12 +566,13 @@ TREE_PREFIX int SUFFIX(tree_count_,TREE_NAME) (TREE_NODE_TYPE *T) {
 
 
 TREE_PREFIX TREE_NODE_TYPE *SUFFIX (tree_alloc_, TREE_NAME) (X_TYPE x, Y_TYPE y) {
-  TREE_NODE_TYPE *T = 
+  TREE_NODE_TYPE *T =
   #ifndef TREE_MALLOC
     zmalloc0 (sizeof (*T));
   #else
     calloc (sizeof (*T), 1);
   #endif
+  assert (T);
   T->x = x;
   T->y = y;
   #ifdef TREE_PTHREAD
@@ -657,6 +658,7 @@ TREE_PREFIX TREE_NODE_TYPE *SUFFIX(get_tree_ptr_, TREE_NAME) (TREE_NODE_TYPE **T
 TREE_PREFIX void SUFFIX(free_tree_ptr_, TREE_NAME)(TREE_NODE_TYPE *T) {
   if (T && is_hazard_ptr (T, COMMON_HAZARD_PTR_NUM, COMMON_HAZARD_PTR_NUM)) {
     struct free_later *F = malloc (sizeof (*F));
+    assert (F);
     F->ptr = T;
     F->free = (void *)SUFFIX(free_tree_ptr_, TREE_NAME);
     insert_free_later_struct (F);
