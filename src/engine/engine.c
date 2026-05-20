@@ -628,6 +628,7 @@ int default_main (server_functions_t *F, int argc, char *argv[]) {
   set_signals_handlers ();
 
   engine_t *E = calloc (sizeof (*E), 1);
+  assert (E);
   engine_state = E;
 
   engine_startup (E, F);
