@@ -190,6 +190,9 @@ int sb_register_stat_fun (stat_fun_t func) {
     }
   }
   p = malloc (sizeof (*p));
+  if (!p) {
+    return -1;
+  }
   p->func = func;
   p->next = NULL;
   if (last) {
