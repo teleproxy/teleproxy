@@ -43,7 +43,15 @@ Teleproxy announces a small TCP Maximum Segment Size (256 bytes) in the SYN-ACK 
 
 This is automatic, requires no configuration, and works against unmodified Telegram clients on every platform. The HTTP `/stats` and `/metrics` listener uses the full system MSS and is unaffected.
 
-Trade-off: Linux applies the listening-socket MSS to both directions of each accepted connection, so server→client segments are also capped at 256 bytes. Packet count rises ~5× compared to MSS=1460 and per-byte TCP/IP header overhead grows from ~3% to ~15%. On modern hardware with TSO/GSO offload, CPU cost stays manageable, and a 20MB MTProto download still completes well inside any sensible timeout. Bandwidth-saturated proxies will see a measurable throughput cap; heavy operators who would rather take the JA4 detection risk than the overhead can rebuild without the `SM_LOWMSS` bit — but the default ships with fragmentation on because for most users a working proxy that runs slower beats a fast proxy that gets blocked.
+Trade-off: Linux applies the listening-socket MSS to both directions of each accepted connection, so server→client segments are also capped at 256 bytes. Packet count rises ~5× compared to MSS=1460 and per-byte TCP/IP header overhead grows from ~3% to ~15%. On modern hardware with TSO/GSO offload, CPU cost stays manageable, and a 20MB MTProto download still completes well inside any sensible timeout. Bandwidth-saturated proxies will see a measurable throughput cap.
+
+**Turning it off.** Operators who would rather take the JA4 detection risk than the throughput overhead can disable the clamp:
+
+- TOML: `mss_clamp = false` (top-level key)
+- CLI: `--no-mss-clamp`
+- Docker / `start.sh`: `MSS_CLAMP=false` (or `MSS_CLAMP=0`)
+
+Any one of these turns the SYN-ACK MSS announcement back to system default — every accepted connection gets a normal-size MSS in both directions, and the proxy carries bulk MTProto at full speed. The default remains on, because for most users a working proxy that runs slightly slower beats a fast proxy that gets blocked.
 
 ### GREASE randomization
 

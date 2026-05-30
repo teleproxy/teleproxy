@@ -128,6 +128,9 @@ STATS_PORT=${STATS_PORT:-8888}
 WORKERS=${WORKERS:-1}
 PROXY_TAG=${PROXY_TAG:-}
 RANDOM_PADDING=${RANDOM_PADDING:-}
+# Automatic ClientHello fragmentation (TCP MSS clamp on the proxy listener,
+# DPI/JA4 evasion). On by default; set MSS_CLAMP=false to turn off.
+MSS_CLAMP=${MSS_CLAMP:-}
 # Domain or host:port for TLS-transport mode (e.g. google.com or 127.0.0.1:8443)
 EE_DOMAIN=${EE_DOMAIN:-}
 # Optional separate backend for fake-TLS camouflage. Lets EE_DOMAIN stay a
@@ -236,6 +239,10 @@ TOML_CONFIG="data/config.toml"
 
     if [ "$PROXY_PROTOCOL" = "true" ]; then
         echo "proxy_protocol = true"
+    fi
+
+    if [ "$MSS_CLAMP" = "false" ] || [ "$MSS_CLAMP" = "0" ]; then
+        echo "mss_clamp = false"
     fi
 
     if [ -n "$DC_PROBE_INTERVAL" ]; then

@@ -43,7 +43,15 @@ Teleproxy thông báo TCP MSS nhỏ (256 byte) trong SYN-ACK trên cổng nghe c
 
 Hoạt động tự động, không cần cấu hình, áp dụng với client Telegram không sửa đổi trên mọi nền tảng. Listener HTTP `/stats` / `/metrics` dùng MSS hệ thống mặc định và không bị ảnh hưởng.
 
-Đánh đổi: Linux áp dụng MSS của socket nghe cho cả hai hướng của mỗi kết nối được chấp nhận, nên các đoạn server→client cũng bị giới hạn ở 256 byte. Số gói tin tăng khoảng 5 lần và phần overhead TCP/IP header tăng từ ~3% lên ~15%. Trên phần cứng hiện đại có TSO/GSO, chi phí CPU vẫn quản lý được, nhưng các proxy bão hòa băng thông sẽ thấy giới hạn thông lượng đáng kể. Mặc định bật phân mảnh — với hầu hết người dùng, một proxy hoạt động nhưng chậm hơn vẫn tốt hơn một proxy nhanh bị chặn.
+Đánh đổi: Linux áp dụng MSS của socket nghe cho cả hai hướng của mỗi kết nối được chấp nhận, nên các đoạn server→client cũng bị giới hạn ở 256 byte. Số gói tin tăng khoảng 5 lần và phần overhead TCP/IP header tăng từ ~3% lên ~15%. Trên phần cứng hiện đại có TSO/GSO, chi phí CPU vẫn quản lý được, nhưng các proxy bão hòa băng thông sẽ thấy giới hạn thông lượng đáng kể.
+
+**Cách tắt.** Các operator muốn chấp nhận rủi ro bị JA4 phát hiện thay vì chịu overhead thông lượng có thể tắt MSS clamp:
+
+- TOML: `mss_clamp = false` (khoá cấp cao nhất)
+- CLI: `--no-mss-clamp`
+- Docker / `start.sh`: `MSS_CLAMP=false` (hoặc `MSS_CLAMP=0`)
+
+Bất kỳ cách nào ở trên đều đưa MSS thông báo trong SYN-ACK trở về giá trị hệ thống mặc định — mọi kết nối được chấp nhận sẽ có MSS bình thường ở cả hai hướng, và proxy mang lưu lượng MTProto khối lượng lớn ở tốc độ tối đa. Mặc định vẫn bật phân mảnh — với hầu hết người dùng, một proxy hoạt động hơi chậm hơn vẫn tốt hơn một proxy nhanh nhưng bị chặn.
 
 ### Ngẫu nhiên hóa GREASE
 

@@ -340,6 +340,7 @@ int toml_config_load (const char *path, struct toml_config *cfg,
   cfg->direct = -1;
   cfg->http_stats = -1;
   cfg->random_padding_only = -1;
+  cfg->mss_clamp = -1;
   cfg->ipv6 = -1;
 
   toml_result_t res = toml_parse_file_ex (path);
@@ -433,6 +434,7 @@ int toml_config_load (const char *path, struct toml_config *cfg,
   /* Misc */
   cfg->random_padding_only = get_optional_bool (top, "random_padding_only", -1);
   cfg->proxy_protocol = get_optional_bool (top, "proxy_protocol", -1);
+  cfg->mss_clamp = get_optional_bool (top, "mss_clamp", -1);
 
   /* DC probes */
   cfg->dc_probe_interval = get_optional_int (top, "dc_probe_interval", -1);
@@ -507,6 +509,10 @@ int toml_config_reload (const char *path, struct toml_config *cfg) {
   if (new_cfg.proxy_protocol >= 0 && cfg->proxy_protocol >= 0 &&
       new_cfg.proxy_protocol != cfg->proxy_protocol) {
     kprintf ("config reload: 'proxy_protocol' changed — restart required\n");
+  }
+  if (new_cfg.mss_clamp >= 0 && cfg->mss_clamp >= 0 &&
+      new_cfg.mss_clamp != cfg->mss_clamp) {
+    kprintf ("config reload: 'mss_clamp' changed — restart required\n");
   }
   if (new_cfg.dc_probe_interval >= 0 && cfg->dc_probe_interval >= 0 &&
       new_cfg.dc_probe_interval != cfg->dc_probe_interval) {

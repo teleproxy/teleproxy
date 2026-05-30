@@ -80,6 +80,9 @@ struct toml_config {
   /* Misc (not reloadable) */
   int random_padding_only; /* -R; -1 = not set */
   int proxy_protocol;      /* --proxy-protocol; -1 = not set */
+  int mss_clamp;           /* automatic ClientHello fragmentation (DPI/JA4
+                              evasion); -1 = not set / on (default), 0 = off,
+                              1 = on */
 
   /* Drain timeout (reloadable).  Seconds an old secret keeps serving
      in-flight connections after SIGHUP removes it; 0 = infinite (never

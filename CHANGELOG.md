@@ -1,5 +1,25 @@
 # Changelog
 
+## [4.14.1] - 2026-05-30
+
+- Fix macOS backend-forward path. Backend forwarding (the camouflage fallback
+  for invalid handshakes — wrong secret, stale timestamp, unknown SNI,
+  duplicate client_random, plain HTTPS probes) silently dropped every
+  request on macOS native builds: `writev()` to a freshly opened outbound
+  socket whose `connect()` was still in `EINPROGRESS` returns `ENOTCONN`
+  on BSD/Darwin where Linux returns `EAGAIN`. The proxy treated anything
+  other than `EAGAIN`/`EINTR` as fatal and tore down the connection
+  before the SYN-ACK arrived. Now treats `ENOTCONN` as a retry condition
+  too. Five fake-TLS E2E tests (`test_wrong_secret_rejected`,
+  `test_stale_timestamp_rejected`, `test_unknown_sni_falls_back`,
+  `test_duplicate_client_random_rejected`, `test_browser_tls_sees_real_backend`)
+  now pass on the macOS dev build alongside Linux.
+- New `mss_clamp` TOML key + `--no-mss-clamp` CLI flag + `MSS_CLAMP=false`
+  env var to disable the automatic ClientHello fragmentation shipped in
+  v4.14.0. Default stays on. Useful escape hatch for bandwidth-bound
+  operators willing to take the JA4 detection risk in exchange for ~5×
+  lower packet count on the proxy listener.
+
 ## [4.14.0] - 2026-05-30
 
 - Automatic ClientHello fragmentation against TSPU JA4 fingerprinting (#39).

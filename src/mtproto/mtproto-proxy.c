@@ -1562,6 +1562,9 @@ int f_parse_option (int val) {
       dc_probe_interval_from_cli = 0;
     }
     break;
+  case 2010:
+    toml_cfg.mss_clamp = 0;
+    break;
   default:
     return -1;
   }
@@ -1589,6 +1592,7 @@ void mtfront_prepare_parse_options (void) {
   parse_option ("socks5", required_argument, 0, 2007, "route upstream DC connections through SOCKS5 proxy (socks5://[user:pass@]host:port)");
   parse_option ("proxy-protocol", no_argument, 0, 2008, "enable PROXY protocol v1/v2 on client listeners (for use behind HAProxy/nginx/NLB)");
   parse_option ("dc-probe-interval", required_argument, 0, 2009, "seconds between DC health probes (0=disabled, default 0)");
+  parse_option ("no-mss-clamp", no_argument, 0, 2010, "disable automatic ClientHello fragmentation (default on; see DPI Resistance docs)");
 }
 
 void mtfront_parse_extra_args (int argc, char *argv[]) /* {{{ */ {
@@ -1767,8 +1771,11 @@ void mtfront_pre_init (void) {
     vkprintf (0, "--address specifies an IPv4 bind address; keeping IPv4 listener (outbound IPv6 still active)\n");
   }
 
+  /* mss_clamp default is on (-1 = not set treated as on). Explicit
+     mss_clamp=false in TOML or --no-mss-clamp on CLI sets it to 0. */
+  int mss_clamp_on = (toml_cfg.mss_clamp != 0);
   for (i = 0; i < http_ports_num; i++) {
-    http_sfd[i] = server_socket (http_port[i], engine_state->settings_addr, engine_get_backlog (), enable_ipv6 | SM_LOWMSS);
+    http_sfd[i] = server_socket (http_port[i], engine_state->settings_addr, engine_get_backlog (), enable_ipv6 | (mss_clamp_on ? SM_LOWMSS : 0));
     if (http_sfd[i] < 0) {
       kprintf ("cannot open http/tcp server socket at port %d: %m\n", http_port[i]);
       exit (1);

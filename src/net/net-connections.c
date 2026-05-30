@@ -850,7 +850,10 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
     MODULE_STAT->tcp_readv_calls ++;
 
     if (r <= 0) {
-      if (r < 0 && errno == EAGAIN) {
+      if (r < 0 && (errno == EAGAIN || errno == ENOTCONN)) {
+        /* ENOTCONN: connect() is still in progress (EINPROGRESS path), no
+           data yet. Linux returns EAGAIN here; macOS/BSD return ENOTCONN.
+           Treat both as "no data, try later". */
       } else if (r < 0 && errno == EINTR) {
         __sync_fetch_and_and (&c->flags, ~C_NORD);
         MODULE_STAT->tcp_readv_intr ++;
@@ -864,7 +867,7 @@ int net_server_socket_reader (socket_connection_job_t C) /* {{{ */ {
     } else {
       __sync_fetch_and_and (&c->flags, ~C_NORD);
     }
-      
+
     if (verbosity > 0 && r < 0 && errno != EAGAIN) {
       perror ("recv()");
     }
@@ -965,7 +968,12 @@ int net_server_socket_writer (socket_connection_job_t C) /* {{{ */{
     MODULE_STAT->tcp_writev_calls ++;
 
     if (r <= 0) {
-      if (r < 0 && errno == EAGAIN) {
+      if (r < 0 && (errno == EAGAIN || errno == ENOTCONN)) {
+        /* ENOTCONN: connect() is still in progress (EINPROGRESS path),
+           we have nothing to write yet because the handshake isn't done.
+           Linux returns EAGAIN here; macOS/BSD return ENOTCONN. Treat
+           both as "would block, retry later" so the EAGAIN backoff
+           counter applies to the BSD path too. */
         if (++c->eagain_count > 100) {
           kprintf ("Too much EAGAINs for connection %d (%s), dropping\n", c->fd, show_remote_socket_ip (C));
           job_signal (JOB_REF_CREATE_PASS (C), JS_ABORT);
