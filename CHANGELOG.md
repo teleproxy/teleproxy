@@ -7,9 +7,11 @@
   forcing the client kernel to chop its outgoing ClientHello across 4-5 TCP
   segments. Single-packet JA4 extractors no longer see the full cipher list,
   extensions, sig-algs and ALPN in one packet. No configuration; no client
-  change required; throughput is unaffected (Telegram traffic is upload-light,
-  and the MSS limit only constrains client→server). The HTTP `/stats` and
-  `/metrics` listener keeps the system default MSS.
+  change required. The HTTP `/stats` and `/metrics` listener keeps the system
+  default MSS. Trade-off: Linux caps server→client segments at the same MSS,
+  raising packet count ~10× and TCP/IP header overhead from ~3% to ~25% on
+  the proxy listener — measurable on bandwidth-saturated deployments but
+  preferable to the proxy being blocked.
 
 ## [4.13.0] - 2026-05-21
 

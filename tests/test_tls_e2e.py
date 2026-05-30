@@ -488,8 +488,13 @@ def test_fake_tls_handshake():
     sock.connect((socket.gethostbyname(host), port))
     sock.sendall(bytes(hello))
 
-    # Read ServerHello response
+    # Read ServerHello response. The proxy forces the client kernel to
+    # fragment via a small SYN-ACK MSS (DPI evasion), and this MSS also caps
+    # server->client segments — so encrypted records arrive across many small
+    # TCP segments. Don't break on a byte threshold; read for a fixed window
+    # and let the data accumulate.
     data = b""
+    sock.settimeout(0.5)
     deadline = time.time() + 5
     while time.time() < deadline:
         try:
@@ -497,11 +502,10 @@ def test_fake_tls_handshake():
             if not chunk:
                 break
             data += chunk
-            # ServerHello(127) + CCS(6) + at least one encrypted header(5) = 138 minimum
+        except socket.timeout:
+            # Short idle gap → assume proxy is done sending the handshake.
             if len(data) >= 138:
                 break
-        except socket.timeout:
-            break
     sock.close()
 
     assert len(data) >= 138, (
