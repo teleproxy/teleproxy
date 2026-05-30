@@ -1,21 +1,465 @@
-name: Issue Notifications
+name: Issue Pipeline
 
 on:
   issues:
     types: [opened]
   issue_comment:
     types: [created]
+  discussion:
+    types: [created]
+  discussion_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      target_type:
+        description: 'Type of target to moderate'
+        type: choice
+        required: true
+        options: [issue, discussion, issue_comment, discussion_comment]
+      target_number:
+        description: 'Issue/discussion number (parent number for comments)'
+        type: number
+        required: true
+      target_comment_id:
+        description: 'Comment ID (required for *_comment types)'
+        type: number
+        required: false
+      dry_run:
+        description: 'Analyse and log only; skip delete/close/block'
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
   issues: write
+  discussions: write
+  models: read
 
 concurrency:
   group: telegram-notify
   cancel-in-progress: false
 
 jobs:
+  moderate:
+    runs-on: ubuntu-latest
+    outputs:
+      is_spam: ${{ steps.run.outputs.is_spam }}
+    steps:
+      - id: run
+        uses: actions/github-script@v7
+        env:
+          MODERATION_TOKEN: ${{ secrets.MODERATION_TOKEN }}
+          DISPATCH_TARGET_TYPE: ${{ inputs.target_type }}
+          DISPATCH_TARGET_NUMBER: ${{ inputs.target_number }}
+          DISPATCH_TARGET_COMMENT_ID: ${{ inputs.target_comment_id }}
+          DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+        with:
+          script: |
+            // Fail-closed default: any unhandled error leaves is_spam=true so
+            // the notify job never runs on a half-classified event.
+            core.setOutput('is_spam', 'true');
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const modToken = process.env.MODERATION_TOKEN || '';
+            const hasModToken = modToken.length > 0;
+
+            // octokit with the elevated PAT, used for delete/block only.
+            const adminKit = hasModToken ? require('@actions/github').getOctokit(modToken) : null;
+
+            // ---------- 1. Resolve target ----------
+            // Returns { kind, number, commentId, title, body, author, parentNumber?, nodeId?, commentNodeId? }
+            async function resolveLiveTarget() {
+              const e = context.eventName;
+              const p = context.payload;
+              if (e === 'issues' && p.action === 'opened') {
+                return {
+                  kind: 'issue',
+                  number: p.issue.number,
+                  title: p.issue.title || '',
+                  body: p.issue.body || '',
+                  author: p.issue.user.login,
+                  authorType: p.issue.user.type,
+                  nodeId: p.issue.node_id,
+                };
+              }
+              if (e === 'issue_comment' && p.action === 'created') {
+                return {
+                  kind: 'issue_comment',
+                  number: p.issue.number,
+                  commentId: p.comment.id,
+                  commentNodeId: p.comment.node_id,
+                  title: p.issue.title || '',
+                  body: p.comment.body || '',
+                  author: p.comment.user.login,
+                  authorType: p.comment.user.type,
+                };
+              }
+              if (e === 'discussion' && p.action === 'created') {
+                return {
+                  kind: 'discussion',
+                  number: p.discussion.number,
+                  title: p.discussion.title || '',
+                  body: p.discussion.body || '',
+                  author: p.discussion.user.login,
+                  authorType: p.discussion.user.type,
+                  nodeId: p.discussion.node_id,
+                };
+              }
+              if (e === 'discussion_comment' && p.action === 'created') {
+                return {
+                  kind: 'discussion_comment',
+                  number: p.discussion.number,
+                  commentId: p.comment.id,
+                  commentNodeId: p.comment.node_id,
+                  title: p.discussion.title || '',
+                  body: p.comment.body || '',
+                  author: p.comment.user.login,
+                  authorType: p.comment.user.type,
+                };
+              }
+              return null;
+            }
+
+            async function resolveDispatchTarget() {
+              const kind = process.env.DISPATCH_TARGET_TYPE;
+              const num = parseInt(process.env.DISPATCH_TARGET_NUMBER, 10);
+              const cid = process.env.DISPATCH_TARGET_COMMENT_ID
+                ? parseInt(process.env.DISPATCH_TARGET_COMMENT_ID, 10)
+                : null;
+
+              if (kind === 'issue') {
+                const r = await github.rest.issues.get({ owner, repo, issue_number: num });
+                return {
+                  kind, number: num,
+                  title: r.data.title || '', body: r.data.body || '',
+                  author: r.data.user.login, authorType: r.data.user.type,
+                  nodeId: r.data.node_id,
+                };
+              }
+              if (kind === 'issue_comment') {
+                if (!cid) throw new Error('target_comment_id required for issue_comment');
+                const r = await github.rest.issues.getComment({ owner, repo, comment_id: cid });
+                return {
+                  kind, number: num, commentId: cid,
+                  commentNodeId: r.data.node_id,
+                  title: '', body: r.data.body || '',
+                  author: r.data.user.login, authorType: r.data.user.type,
+                };
+              }
+              if (kind === 'discussion' || kind === 'discussion_comment') {
+                const q = `query($owner:String!,$repo:String!,$number:Int!){
+                  repository(owner:$owner,name:$repo){
+                    discussion(number:$number){
+                      id title bodyText author{login} comments(first:100){nodes{id databaseId bodyText author{login}}}
+                    }
+                  }
+                }`;
+                const d = await github.graphql(q, { owner, repo, number: num });
+                const disc = d.repository.discussion;
+                if (kind === 'discussion') {
+                  return {
+                    kind, number: num,
+                    title: disc.title || '', body: disc.bodyText || '',
+                    author: disc.author?.login || 'unknown', authorType: 'User',
+                    nodeId: disc.id,
+                  };
+                }
+                if (!cid) throw new Error('target_comment_id required for discussion_comment');
+                const c = disc.comments.nodes.find(n => n.databaseId === cid);
+                if (!c) throw new Error(`discussion comment ${cid} not found`);
+                return {
+                  kind, number: num, commentId: cid, commentNodeId: c.id,
+                  title: disc.title || '', body: c.bodyText || '',
+                  author: c.author?.login || 'unknown', authorType: 'User',
+                };
+              }
+              throw new Error(`unknown target_type: ${kind}`);
+            }
+
+            const isDispatch = context.eventName === 'workflow_dispatch';
+            const dryRun = isDispatch && process.env.DISPATCH_DRY_RUN === 'true';
+            const target = isDispatch ? await resolveDispatchTarget() : await resolveLiveTarget();
+            if (!target) {
+              core.info(`Unhandled event ${context.eventName} action=${context.payload.action} — passing through`);
+              core.setOutput('is_spam', 'false');
+              return;
+            }
+
+            // Skip bots and the maintainer entirely.
+            if (target.authorType === 'Bot' || target.author === 'rkline0x') {
+              core.info(`Skipping moderation for ${target.author} (${target.authorType})`);
+              core.setOutput('is_spam', 'false');
+              return;
+            }
+
+            // ---------- 2. Score ----------
+            const title = target.title;
+            const body = target.body;
+            const both = `${title}\n${body}`;
+
+            const signals = [];
+            let score = 0;
+            const add = (pts, name) => { score += pts; signals.push(name); };
+
+            const setProxyUrl = /https?:\/\/t\.me\/SetProxy\b/i.test(body);
+            const setProxyHandle = /(?:^|[\s(\[<>"'\/])@SetProxy\b/i.test(body);
+            const setProxyMatched = setProxyUrl || setProxyHandle;
+            if (setProxyMatched) add(5, setProxyUrl ? 'setproxy-url' : 'setproxy-handle');
+
+            let countedQuickConnect = false;
+            if (/t\.me\/proxy\?[^\s)]*\bserver=[^\s&)]+[^\s)]*\bsecret=[a-f0-9]+/i.test(both)) {
+              add(5, 'tme-proxy-quickconnect');
+              countedQuickConnect = true;
+            }
+            // Only score standalone secret= hex when not already counted inside a quick-connect URL.
+            if (!countedQuickConnect && /\bsecret=[a-f0-9]{32,}/i.test(body)) {
+              add(3, 'secret-hex');
+            }
+            if (/\bfree\b/i.test(both)
+                && /\b(mtproto|proxy)\b/i.test(both)
+                && /@\w+/.test(body)
+                && /\b(subscribers|daily updates|channel|join)\b/i.test(body)) {
+              add(3, 'free-mtproto-channel-cta');
+            }
+            if (/\[proxy\]/i.test(title) || /\bfree\s+mtproto\b/i.test(title)) {
+              add(3, 'title-fingerprint');
+            }
+
+            // Author signals — REST /users/{login}
+            let authorMeta = null;
+            try {
+              const u = await github.rest.users.getByUsername({ username: target.author });
+              authorMeta = {
+                created_at: u.data.created_at,
+                public_repos: u.data.public_repos,
+                followers: u.data.followers,
+              };
+              const ageDays = (Date.now() - new Date(u.data.created_at).getTime()) / 86400000;
+              if (ageDays < 7) add(2, 'fresh-account');
+              if (u.data.public_repos === 0 && u.data.followers === 0) add(2, 'no-public-presence');
+            } catch (e) {
+              core.warning(`User lookup failed for ${target.author}: ${e.message}`);
+            }
+
+            // Near-duplicate title vs prior spam-labeled issues.
+            try {
+              const q = `repo:${owner}/${repo} label:spam in:title ${title.replace(/[^\w\s]/g, ' ').trim().split(/\s+/).slice(0, 4).join(' ')}`;
+              const sr = await github.rest.search.issuesAndPullRequests({ q, per_page: 5 });
+              if (sr.data.total_count > 0) add(3, 'duplicate-of-prior-spam');
+            } catch (e) {
+              core.warning(`Search for prior spam failed: ${e.message}`);
+            }
+
+            // Prior spam by same author (used for block trigger downstream).
+            let priorSpamByAuthor = 0;
+            try {
+              const sr = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${owner}/${repo} author:${target.author} label:spam`,
+                per_page: 1,
+              });
+              priorSpamByAuthor = sr.data.total_count;
+            } catch (e) {
+              core.warning(`Prior-spam search failed: ${e.message}`);
+            }
+
+            // ---------- 3. LLM tiebreaker (only for borderline 2-4) ----------
+            async function llmTiebreaker(t, b) {
+              const resp = await fetch('https://models.github.ai/inference/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'openai/gpt-4o-mini',
+                  messages: [
+                    {
+                      role: 'system',
+                      content: `You classify GitHub issues/discussions on teleproxy/teleproxy (an MTProto proxy implementation) as spam or legitimate.
+
+            SPAM patterns:
+            - "Free MTProto proxy" listings with server IP + port + hex secret, often in a markdown table
+            - Telegram channel plugs ("@SomeChannel", "subscribers", "daily updates", "join our channel")
+            - t.me/proxy?server=... quick-connect URLs
+            - Boilerplate "24/7 uptime", "low latency", flag emojis next to a city name
+            - Posts that read like ad templates rather than reports or questions
+
+            LEGITIMATE:
+            - Bug reports with stack traces, configs, version numbers
+            - Feature requests with concrete use cases
+            - Build/install questions
+            - Discussions ABOUT spam ("we keep getting hit by SetProxy bots") — not spam itself
+
+            Respond with EXACTLY one token: SPAM, NOT_SPAM, or UNSURE. No explanation.`,
+                    },
+                    { role: 'user', content: `Title: ${t}\n\nBody:\n${(b || '').slice(0, 4000)}` },
+                  ],
+                  temperature: 0,
+                  max_tokens: 5,
+                }),
+              });
+              if (!resp.ok) {
+                core.warning(`LLM tiebreaker unavailable: ${resp.status} ${await resp.text()}`);
+                return 'UNAVAILABLE';
+              }
+              const data = await resp.json();
+              const verdict = (data.choices?.[0]?.message?.content || '').trim().toUpperCase();
+              if (['SPAM', 'NOT_SPAM', 'UNSURE'].includes(verdict)) return verdict;
+              return 'UNAVAILABLE';
+            }
+
+            // ---------- 4. Decide tier ----------
+            let tier;        // 'allow' | 'close' | 'delete'
+            let blockAuthor = false;
+            let llmVerdict = 'SKIPPED';
+
+            if (score >= 5) {
+              tier = 'delete';
+              if (setProxyMatched || priorSpamByAuthor > 0) blockAuthor = true;
+            } else if (score >= 2) {
+              llmVerdict = await llmTiebreaker(title, body);
+              tier = llmVerdict === 'SPAM' ? 'close' : 'allow';
+            } else {
+              tier = 'allow';
+            }
+
+            const summary = `event=${target.kind} number=${target.number} score=${score} signals=${signals.join(',')||'-'} llm_verdict=${llmVerdict} tier=${tier} block=${blockAuthor} dry_run=${dryRun}`;
+            core.info(summary);
+
+            // ---------- 5. Audit log (mandatory for non-allow) ----------
+            if (tier !== 'allow') {
+              const audit = {
+                ts: new Date().toISOString(),
+                kind: target.kind,
+                number: target.number,
+                comment_id: target.commentId,
+                title,
+                body,
+                author: target.author,
+                author_meta: authorMeta,
+                score,
+                signals,
+                llm_verdict: llmVerdict,
+                tier,
+                block_author: blockAuthor,
+                dry_run: dryRun,
+              };
+              await core.summary
+                .addHeading(`Moderation: ${target.kind} #${target.number}`)
+                .addRaw(`\`${summary}\``)
+                .addCodeBlock(JSON.stringify(audit, null, 2), 'json')
+                .write();
+            }
+
+            if (tier === 'allow') {
+              core.setOutput('is_spam', 'false');
+              return;
+            }
+
+            // ---------- 6. Take action ----------
+            // Without MODERATION_TOKEN, delete-tier downgrades to close-tier
+            // (deleteIssue/deleteDiscussion need admin scope).
+            if (tier === 'delete' && !hasModToken) {
+              core.warning('MODERATION_TOKEN unset — downgrading delete to close');
+              tier = 'close';
+            }
+
+            async function ensureSpamLabel() {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: 'spam' });
+              } catch (e) {
+                if (e.status !== 404) throw e;
+                await github.rest.issues.createLabel({
+                  owner, repo, name: 'spam', color: 'd73a4a',
+                  description: 'Closed/deleted by automated moderation',
+                });
+              }
+            }
+
+            async function labelIssue(num) {
+              await ensureSpamLabel();
+              await github.rest.issues.addLabels({ owner, repo, issue_number: num, labels: ['spam'] });
+            }
+
+            async function labelDiscussion(discNodeId) {
+              await ensureSpamLabel();
+              const repoData = await github.graphql(`query($o:String!,$r:String!){repository(owner:$o,name:$r){label(name:"spam"){id}}}`, { o: owner, r: repo });
+              const labelId = repoData.repository.label.id;
+              await github.graphql(
+                `mutation($l:ID!,$ids:[ID!]!){addLabelsToLabelable(input:{labelableId:$l,labelIds:$ids}){clientMutationId}}`,
+                { l: discNodeId, ids: [labelId] }
+              );
+            }
+
+            async function blockAuthorOrgwide(login) {
+              if (!hasModToken) {
+                core.warning(`Cannot block ${login} — MODERATION_TOKEN unset`);
+                return;
+              }
+              try {
+                await adminKit.request('PUT /orgs/{org}/blocks/{username}', { org: owner, username: login });
+                core.info(`Blocked ${login}`);
+              } catch (e) {
+                if (e.status === 422 || e.status === 204 || e.status === 304) {
+                  core.info(`Block no-op for ${login} (status ${e.status})`);
+                } else {
+                  core.warning(`Block failed for ${login}: ${e.status} ${e.message}`);
+                }
+              }
+            }
+
+            if (dryRun) {
+              core.info(`DRY RUN — skipping mutations. Would ${tier} ${target.kind}#${target.number}` + (blockAuthor ? ` and block ${target.author}` : ''));
+              core.setOutput('is_spam', 'true');
+              return;
+            }
+
+            try {
+              if (tier === 'delete') {
+                if (target.kind === 'issue') {
+                  await adminKit.graphql(`mutation($id:ID!){deleteIssue(input:{issueId:$id}){clientMutationId}}`, { id: target.nodeId });
+                } else if (target.kind === 'discussion') {
+                  await adminKit.graphql(`mutation($id:ID!){deleteDiscussion(input:{id:$id}){clientMutationId}}`, { id: target.nodeId });
+                } else if (target.kind === 'issue_comment') {
+                  await adminKit.request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+                    owner, repo, comment_id: target.commentId,
+                  });
+                  await labelIssue(target.number);
+                } else if (target.kind === 'discussion_comment') {
+                  await adminKit.graphql(`mutation($id:ID!){deleteDiscussionComment(input:{id:$id}){clientMutationId}}`, { id: target.commentNodeId });
+                }
+              } else if (tier === 'close') {
+                if (target.kind === 'issue') {
+                  await labelIssue(target.number);
+                  await github.rest.issues.update({ owner, repo, issue_number: target.number, state: 'closed', state_reason: 'not_planned' });
+                  await github.rest.issues.lock({ owner, repo, issue_number: target.number, lock_reason: 'spam' });
+                } else if (target.kind === 'discussion') {
+                  await labelDiscussion(target.nodeId);
+                  await github.graphql(`mutation($id:ID!){closeDiscussion(input:{discussionId:$id,reason:OUTDATED}){clientMutationId}}`, { id: target.nodeId });
+                  await github.graphql(`mutation($id:ID!){lockLockable(input:{lockableId:$id,lockReason:SPAM}){clientMutationId}}`, { id: target.nodeId });
+                } else if (target.kind === 'issue_comment' || target.kind === 'discussion_comment') {
+                  await github.graphql(
+                    `mutation($id:ID!){minimizeComment(input:{subjectId:$id,classifier:SPAM}){minimizedComment{isMinimized}}}`,
+                    { id: target.commentNodeId }
+                  );
+                  if (target.kind === 'issue_comment') await labelIssue(target.number);
+                }
+              }
+            } catch (e) {
+              core.error(`Action ${tier} on ${target.kind}#${target.number} failed: ${e.status||''} ${e.message}`);
+              // Still treat as spam so notify is suppressed.
+            }
+
+            if (blockAuthor) await blockAuthorOrgwide(target.author);
+
+            core.setOutput('is_spam', 'true');
+
   notify:
+    needs: moderate
+    if: needs.moderate.result == 'success' && needs.moderate.outputs.is_spam == 'false' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
