@@ -65,8 +65,39 @@ jobs:
             const modToken = process.env.MODERATION_TOKEN || '';
             const hasModToken = modToken.length > 0;
 
-            // octokit with the elevated PAT, used for delete/block only.
-            const adminKit = hasModToken ? require('@actions/github').getOctokit(modToken) : null;
+            // Raw fetch helpers — the github-script sandbox does not expose
+            // require('@actions/github'), so we cannot construct a second
+            // Octokit. The elevated PAT is used only for delete/block.
+            async function adminRest(method, path, body) {
+              const resp = await fetch(`https://api.github.com${path}`, {
+                method,
+                headers: {
+                  'Authorization': `Bearer ${modToken}`,
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  ...(body ? { 'Content-Type': 'application/json' } : {}),
+                },
+                body: body ? JSON.stringify(body) : undefined,
+              });
+              return resp;
+            }
+            async function adminGraphql(query, variables) {
+              const resp = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${modToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query, variables }),
+              });
+              const data = await resp.json();
+              if (!resp.ok || data.errors) {
+                const err = new Error(`GraphQL ${resp.status}: ${JSON.stringify(data.errors || data)}`);
+                err.status = resp.status;
+                throw err;
+              }
+              return data.data;
+            }
 
             // ---------- 1. Resolve target ----------
             // Returns { kind, number, commentId, title, body, author, parentNumber?, nodeId?, commentNodeId? }
@@ -399,15 +430,14 @@ jobs:
                 core.warning(`Cannot block ${login} — MODERATION_TOKEN unset`);
                 return;
               }
-              try {
-                await adminKit.request('PUT /orgs/{org}/blocks/{username}', { org: owner, username: login });
-                core.info(`Blocked ${login}`);
-              } catch (e) {
-                if (e.status === 422 || e.status === 204 || e.status === 304) {
-                  core.info(`Block no-op for ${login} (status ${e.status})`);
-                } else {
-                  core.warning(`Block failed for ${login}: ${e.status} ${e.message}`);
-                }
+              const resp = await adminRest('PUT', `/orgs/${owner}/blocks/${login}`);
+              if (resp.status === 204 || resp.status === 304) {
+                core.info(`Blocked ${login} (status ${resp.status})`);
+              } else if (resp.status === 422) {
+                core.info(`Block no-op for ${login} (already blocked)`);
+              } else {
+                const text = await resp.text();
+                core.warning(`Block failed for ${login}: ${resp.status} ${text}`);
               }
             }
 
@@ -420,16 +450,15 @@ jobs:
             try {
               if (tier === 'delete') {
                 if (target.kind === 'issue') {
-                  await adminKit.graphql(`mutation($id:ID!){deleteIssue(input:{issueId:$id}){clientMutationId}}`, { id: target.nodeId });
+                  await adminGraphql(`mutation($id:ID!){deleteIssue(input:{issueId:$id}){clientMutationId}}`, { id: target.nodeId });
                 } else if (target.kind === 'discussion') {
-                  await adminKit.graphql(`mutation($id:ID!){deleteDiscussion(input:{id:$id}){clientMutationId}}`, { id: target.nodeId });
+                  await adminGraphql(`mutation($id:ID!){deleteDiscussion(input:{id:$id}){clientMutationId}}`, { id: target.nodeId });
                 } else if (target.kind === 'issue_comment') {
-                  await adminKit.request('DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}', {
-                    owner, repo, comment_id: target.commentId,
-                  });
+                  const r = await adminRest('DELETE', `/repos/${owner}/${repo}/issues/comments/${target.commentId}`);
+                  if (!r.ok && r.status !== 404) throw new Error(`DELETE comment ${target.commentId} failed: ${r.status} ${await r.text()}`);
                   await labelIssue(target.number);
                 } else if (target.kind === 'discussion_comment') {
-                  await adminKit.graphql(`mutation($id:ID!){deleteDiscussionComment(input:{id:$id}){clientMutationId}}`, { id: target.commentNodeId });
+                  await adminGraphql(`mutation($id:ID!){deleteDiscussionComment(input:{id:$id}){clientMutationId}}`, { id: target.commentNodeId });
                 }
               } else if (tier === 'close') {
                 if (target.kind === 'issue') {
