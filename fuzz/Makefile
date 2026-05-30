@@ -10,10 +10,11 @@ TEST_CFLAGS = -g -O1 -std=gnu11 -Wall -D_GNU_SOURCE=1 $(TEST_COMPAT)
 OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
 OPENSSL_LIBS := $(shell pkg-config --libs openssl 2>/dev/null || echo "-lssl -lcrypto")
 
-TARGETS = fuzz_tls_server_hello fuzz_tls_client_hello fuzz_http_request fuzz_obfs2_header fuzz_obfs2_frame
+TARGETS = fuzz_tls_server_hello fuzz_tls_client_hello fuzz_http_request fuzz_obfs2_header fuzz_obfs2_frame fuzz_ja4
 TEST_TARGETS = test_dc_lookup
 PARSE_OBJS = net-tls-parse.o net-http-parse.o stubs.o
 OBFS2_OBJS = net-obfs2-parse.o sha256.o aesni256.o stubs.o
+JA4_OBJS = net-ja4.o sha256.o stubs.o
 
 .PHONY: all clean run test
 
@@ -52,6 +53,12 @@ fuzz_obfs2_header: fuzz_obfs2_header.c $(OBFS2_OBJS)
 fuzz_obfs2_frame: fuzz_obfs2_frame.c stubs.o net-obfs2-parse.o sha256.o aesni256.o
 	$(CC) $(FUZZ_CFLAGS) $(FUZZ_CINCLUDE) $(OPENSSL_CFLAGS) -o $@ $^ $(OPENSSL_LIBS)
 
+net-ja4.o: ../src/net/net-ja4.c ../src/net/net-ja4.h
+	$(CC) $(FUZZ_CFLAGS) $(FUZZ_CINCLUDE) $(OPENSSL_CFLAGS) -c -o $@ $<
+
+fuzz_ja4: fuzz_ja4.c $(JA4_OBJS)
+	$(CC) $(FUZZ_CFLAGS) $(FUZZ_CINCLUDE) $(OPENSSL_CFLAGS) -o $@ $^ $(OPENSSL_LIBS)
+
 run: $(TARGETS)
 	@failed=0; \
 	for target in $(TARGETS); do \
@@ -71,4 +78,4 @@ test: $(TEST_TARGETS)
 	@for t in $(TEST_TARGETS); do echo "=== $$t ==="; ./$$t || exit 1; done
 
 clean:
-	rm -f $(TARGETS) $(TEST_TARGETS) $(PARSE_OBJS) $(OBFS2_OBJS) mtproto-dc-table.o
+	rm -f $(TARGETS) $(TEST_TARGETS) $(PARSE_OBJS) $(OBFS2_OBJS) $(JA4_OBJS) mtproto-dc-table.o

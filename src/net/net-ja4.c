@@ -32,13 +32,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef FUZZ_TARGET
 #include "common/common-stats.h"
 #include "common/kprintf.h"
-#include "common/sha256.h"
 #include "common/toml-config.h"
 #include "net/net-tls-parse.h"
+#endif
+#include "common/sha256.h"
 
+#ifndef FUZZ_TARGET
 extern struct toml_config toml_cfg;
+#endif
 
 /* -------- TLS ClientHello walker (JA4 spec) -------- */
 
@@ -343,6 +347,8 @@ int ja4_compute (const unsigned char *ch, int len, char out[JA4_HASH_BUF]) {
   return 0;
 }
 
+#ifndef FUZZ_TARGET
+
 /* -------- Worker-local top-N table -------- */
 
 static struct worker_top_ja4 ja4_table[WORKER_TOP_JA4_MAX];
@@ -466,3 +472,5 @@ void ja4_dump_prometheus (stats_buffer_t *sb) {
                (unsigned long long) master_table[i].count);
   }
 }
+
+#endif /* !FUZZ_TARGET */
