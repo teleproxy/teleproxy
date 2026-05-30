@@ -85,6 +85,7 @@
 #define C_STOPWRITE	0x4000000
 #define C_IS_TLS	0x8000000
 #define C_PROXY_PROTOCOL 0x10000000
+#define C_LOWMSS         0x20000000
 
 #define C_PERMANENT (C_IPV6 | C_RAWMSG)
 /* for connection status */

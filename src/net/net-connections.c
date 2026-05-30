@@ -574,6 +574,18 @@ connection_job_t alloc_new_connection (int cfd, conn_target_job_t CTJ, listening
   
   flags = 1;
   setsockopt (cfd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof (flags));
+#ifdef TCP_MAXSEG
+  if (LC && (LC->flags & C_LOWMSS)) {
+    /* Listening socket announced a small MSS in SYN-ACK to fragment the
+       client's ClientHello (DPI evasion). Now that the SYN-ACK is on the
+       wire, raise the per-direction MSS for server->client traffic so bulk
+       MTProto downstream isn't capped to tiny segments. The client's
+       outbound MSS stays at the negotiated value (it's a TCP protocol
+       constant for the connection's lifetime). */
+    int big_mss = 1460;
+    setsockopt (cfd, IPPROTO_TCP, TCP_MAXSEG, &big_mss, sizeof (big_mss));
+  }
+#endif
   if (tcp_maximize_buffers) {
     maximize_sndbuf (cfd, 0);
     maximize_rcvbuf (cfd, 0);
@@ -1371,6 +1383,10 @@ int init_listening_connection_ext (int fd, conn_type_t *type, void *extra, int m
 
   if (mode & SM_RAWMSG) {
     LC->flags |= C_RAWMSG;
+  }
+
+  if (mode & SM_LOWMSS) {
+    LC->flags |= C_LOWMSS;
   }
 
   epoll_sethandler (fd, prio, net_server_socket_read_write_gateway, LCJ);
