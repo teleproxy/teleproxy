@@ -315,6 +315,10 @@ jobs:
         TELEPROXY_SECRET=$TELEPROXY_SECRET TLS_BACKEND_HOST=ya.ru TLS_BACKEND_PORT=443 \
         python3 tests/test_tls_e2e.py
 
+        TELEPROXY_HOST=localhost TELEPROXY_PORT=9443 TELEPROXY_STATS_PORT=9888 \
+        TELEPROXY_SECRET=$TELEPROXY_SECRET TLS_BACKEND_HOST=ya.ru \
+        python3 tests/test_tls_ja4.py
+
         TELEPROXY_HOST=localhost TELEPROXY_PORT=9443 \
         TELEPROXY_SECRET=$TELEPROXY_SECRET TLS_BACKEND_HOST=ya.ru \
         python3 tests/test_tls_fingerprint.py

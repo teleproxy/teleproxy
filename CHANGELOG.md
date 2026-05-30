@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.15.0] - 2026-05-30
+
+- Expose ClientHello JA4 fingerprint distribution on `/stats` and `/metrics`
+  (#102, follow-up to #39 / #101). Every well-formed ClientHello reaching
+  the proxy — including HMAC failures from TSPU probes — is hashed per the
+  foxio JA4 spec and rolled into a top-32 counter per worker, surfaced as
+  `ja4_seen<TAB><hash><TAB><N>` lines in `/stats` and as
+  `teleproxy_ja4_seen{hash="..."}` samples in `/metrics`. Always on, zero
+  configuration. Optional `[stats] ja4_log = true` (`--ja4-log` /
+  `JA4_LOG=true`) prints `ja4=<hash> sni=<name>` per connection at verbose
+  level 2 for one-off investigations. Lets operators see *which* JA4 a new
+  TSPU signature is targeting instead of inferring from user reports.
+
 ## [4.14.1] - 2026-05-30
 
 - Fix macOS backend-forward path. Backend forwarding (the camouflage fallback

@@ -1565,6 +1565,9 @@ int f_parse_option (int val) {
   case 2010:
     toml_cfg.mss_clamp = 0;
     break;
+  case 2011:
+    toml_cfg.ja4_log = 1;
+    break;
   default:
     return -1;
   }
@@ -1593,6 +1596,7 @@ void mtfront_prepare_parse_options (void) {
   parse_option ("proxy-protocol", no_argument, 0, 2008, "enable PROXY protocol v1/v2 on client listeners (for use behind HAProxy/nginx/NLB)");
   parse_option ("dc-probe-interval", required_argument, 0, 2009, "seconds between DC health probes (0=disabled, default 0)");
   parse_option ("no-mss-clamp", no_argument, 0, 2010, "disable automatic ClientHello fragmentation (default on; see DPI Resistance docs)");
+  parse_option ("ja4-log", no_argument, 0, 2011, "log ja4=<hash> sni=<name> per ClientHello at verbose level 2 (top-N counter is always on)");
 }
 
 void mtfront_parse_extra_args (int argc, char *argv[]) /* {{{ */ {

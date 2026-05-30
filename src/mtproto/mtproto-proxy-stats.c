@@ -211,6 +211,7 @@ static void update_local_stats_copy (struct worker_stats *S) {
     UPD (per_secret_drain_forced[_i]);
     tcp_rpcs_snapshot_top_ips (_i, S->top_ips[_i], &S->top_ips_count[_i], WORKER_TOP_IPS_MAX);
   }}
+  ja4_snapshot (S->top_ja4, &S->top_ja4_count, WORKER_TOP_JA4_MAX);
 #undef UPD
   __sync_synchronize();
   S->cnt++;
@@ -330,6 +331,7 @@ void compute_stats_sum (void) {
   }
   memset (&SumStats, 0, sizeof (SumStats));
   master_top_ips_reset ();
+  ja4_master_reset ();
   int i;
   for (i = 0; i < workers; i++) {
     static struct worker_stats W;
@@ -351,6 +353,7 @@ void compute_stats_sum (void) {
     } while (s_cnt != F->cnt);
     add_stats (&W);
     merge_worker_top_ips (&W);
+    ja4_master_merge (W.top_ja4, W.top_ja4_count);
   }
 }
 
@@ -396,6 +399,9 @@ void mtfront_prepare_stats (stats_buffer_t *sb) {
   int allocated_aes_crypto, allocated_aes_crypto_temp;
   int uptime = now - start_time;
   compute_stats_sum ();
+  if (!workers) {
+    ja4_master_prepare_local ();
+  }
   fetch_connections_stat (&conn);
   fetch_buffers_stat (&bufs);
   fetch_tot_dh_rounds_stat (tot_dh_rounds);
@@ -627,6 +633,7 @@ void mtfront_prepare_stats (stats_buffer_t *sb) {
     }
   }
   dc_probes_write_text_stats (sb);
+  ja4_dump_stats (sb);
 #undef S
 #undef S1
 #undef SW
@@ -639,6 +646,7 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
   compute_stats_sum ();
   if (!workers) {
     prepare_master_top_ips_local ();
+    ja4_master_prepare_local ();
   }
   fetch_connections_stat (&conn);
   fetch_buffers_stat (&bufs);
@@ -1065,6 +1073,7 @@ void mtfront_prepare_prometheus_stats (stats_buffer_t *sb) {
   }
 
   dc_probes_write_prometheus (sb);
+  ja4_dump_prometheus (sb);
 
 #undef S
 #undef S1

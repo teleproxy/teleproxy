@@ -32,6 +32,20 @@ Returns Prometheus exposition format on the same stats port. Includes per-secret
 
 Available metrics include connection counts, per-secret connections, rejection counts, and IP ACL rejections.
 
+### ClientHello JA4 Fingerprint Distribution
+
+Every well-formed TLS ClientHello reaching the proxy is fingerprinted with [JA4](https://github.com/FoxIO-LLC/ja4) and accumulated into a top-32 counter — including ClientHellos that subsequently fail HMAC validation. That second part is the point: when TSPU pushes a new detection signature, the only operationally interesting traffic is the probe that *doesn't* validate. Always on, zero configuration.
+
+```
+# HELP teleproxy_ja4_seen ClientHello JA4 fingerprints observed (top 32 by count, aggregated across workers).
+# TYPE teleproxy_ja4_seen counter
+teleproxy_ja4_seen{hash="t13d1615h2_46e7e9700bed_45f260be83e2"} 8
+```
+
+The `/stats` endpoint emits the same data as tab-separated `ja4_seen\t<hash>\t<count>` lines. Diff the distribution against your user count or upstream session log to spot the probe — a fingerprint that shows up only when block rate spikes is the new signature.
+
+Optional: `--ja4-log` (or `[stats] ja4_log = true` in TOML, `JA4_LOG=true` in Docker) prints one `ja4=... sni=...` line per connection at verbose level 2. Useful for one-off investigations, noisy for steady-state logging.
+
 ### DC Latency Probes
 
 When enabled, teleproxy periodically probes all 5 Telegram DCs with a TCP handshake and exposes the results as a Prometheus histogram:

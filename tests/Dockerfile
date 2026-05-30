@@ -3,6 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 ENV PYTHONUNBUFFERED=1
-COPY test_proxy.py test_tls_e2e.py test_tls_fingerprint.py test_wildcard_cert.py test_multi_secret_tls.py test_ip_acl.py test_direct_e2e.py test_secret_limit.py test_secret_quota.py test_secret_drain.py test_rate_limit.py test_top_ips.py test_drs_delays_e2e.py test_cdn_dc.py test_ipv6_direct.py test_bind_address.py test_config_reload.py test_socks5.py test_link_ip.py test_proxy_protocol.py test_dc_probes.py test_autosecret.py test_junk_traffic.py test_secret_csv_label.py test_external_port.py test_unique_ips.py test_unique_ips_handshake.py test_table_full_warning.py test_handshake_timeout.py ./
+COPY test_proxy.py test_tls_e2e.py test_tls_ja4.py test_tls_fingerprint.py test_wildcard_cert.py test_multi_secret_tls.py test_ip_acl.py test_direct_e2e.py test_secret_limit.py test_secret_quota.py test_secret_drain.py test_rate_limit.py test_top_ips.py test_drs_delays_e2e.py test_cdn_dc.py test_ipv6_direct.py test_bind_address.py test_config_reload.py test_socks5.py test_link_ip.py test_proxy_protocol.py test_dc_probes.py test_autosecret.py test_junk_traffic.py test_secret_csv_label.py test_external_port.py test_unique_ips.py test_unique_ips_handshake.py test_table_full_warning.py test_handshake_timeout.py ./
 CMD ["python", "test_proxy.py"]
 

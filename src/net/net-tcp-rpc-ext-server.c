@@ -56,6 +56,7 @@
 #include "net/net-obfs2-parse.h"
 #include "net/net-proxy-protocol.h"
 #include "net/net-tls-parse.h"
+#include "net/net-ja4.h"
 #include "net/net-ip-acl.h"
 #include "net/net-thread.h"
 #include "mtproto/mtproto-dc-table.h"
@@ -1533,6 +1534,7 @@ int tcp_rpcs_compact_parse_execute (connection_job_t C) {
         }
 
         vkprintf (1, "TLS type with domain %s from %s:%d\n", info->domain, show_remote_ip (C), c->remote_port);
+        ja4_observe (client_hello, read_len);
 
         if (c->our_port == 80) {
           vkprintf (1, "Receive TLS request on port %d, proxying to %s\n", c->our_port, info->domain);

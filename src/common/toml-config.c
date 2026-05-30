@@ -426,6 +426,7 @@ int toml_config_load (const char *path, struct toml_config *cfg,
     toml_free (res);
     return -1;
   }
+  cfg->ja4_log = get_optional_bool (top, "ja4_log", 0);
 
   /* IP filtering */
   get_optional_string (top, "ip_blocklist", cfg->ip_blocklist, sizeof (cfg->ip_blocklist));
@@ -530,6 +531,7 @@ int toml_config_reload (const char *path, struct toml_config *cfg) {
   snprintf (cfg->ip_allowlist, sizeof (cfg->ip_allowlist), "%s", new_cfg.ip_allowlist);
 
   cfg->drain_timeout_secs = new_cfg.drain_timeout_secs;
+  cfg->ja4_log = new_cfg.ja4_log;
 
   kprintf ("config reloaded: %d secret(s)\n", cfg->secret_count);
   return 0;

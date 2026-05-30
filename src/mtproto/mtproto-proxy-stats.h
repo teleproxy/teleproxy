@@ -15,6 +15,7 @@
 
 #include "common/common-stats.h"
 #include "net/net-connections.h"
+#include "net/net-ja4.h"
 #include "net/net-tcp-rpc-ext-server.h"
 
 #define MAX_WORKERS	256
@@ -81,6 +82,12 @@ struct worker_stats {
      Prometheus renderer.  Empty when top_ips_per_secret is 0. */
   struct worker_top_ip top_ips[EXT_SECRET_MAX_SLOTS][WORKER_TOP_IPS_MAX];
   int top_ips_count[EXT_SECRET_MAX_SLOTS];
+
+  /* JA4 fingerprint top-N snapshot (issue #102).  Populated each refresh
+     from the worker-local ja4_table.  Master sums counts per hash across
+     workers before rendering /stats and /metrics. */
+  struct worker_top_ja4 top_ja4[WORKER_TOP_JA4_MAX];
+  int top_ja4_count;
 };
 
 extern struct worker_stats *WStats, SumStats;

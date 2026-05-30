@@ -253,6 +253,10 @@ TOML_CONFIG="data/config.toml"
         echo "top_ips_per_secret = $TOP_IPS_PER_SECRET"
     fi
 
+    if [ "$JA4_LOG" = "true" ] || [ "$JA4_LOG" = "1" ]; then
+        echo "ja4_log = true"
+    fi
+
     if [ -n "$DC_OVERRIDE" ]; then
         _save_ifs="$IFS"
         IFS=','

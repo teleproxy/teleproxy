@@ -25,6 +25,8 @@ services:
       # reliably during the early TLS probing phase
       - EE_DOMAIN=172.30.0.10
       - WORKERS=0
+      - STATS_ALLOW_NET=172.30.0.0/24
+      - JA4_LOG=true
     networks:
       - tlsnet
     depends_on:
@@ -46,7 +48,7 @@ services:
       - tlsnet
     depends_on:
       - teleproxy
-    command: ["sh", "-c", "python test_tls_e2e.py && python test_tls_fingerprint.py"]
+    command: ["sh", "-c", "python test_tls_e2e.py && python test_tls_ja4.py && python test_tls_fingerprint.py"]
 
 networks:
   tlsnet:

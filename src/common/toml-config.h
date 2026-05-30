@@ -65,6 +65,11 @@ struct toml_config {
      Operator-side cardinality cap; clamped to WORKER_TOP_IPS_MAX. */
   int top_ips_per_secret;
 
+  /* Log ja4=<hash> sni=<name> per ClientHello at vkprintf level 2.  Default
+     off — the /stats and /metrics JA4 counters are always-on; this flag
+     only enables the per-connection log line. */
+  int ja4_log;
+
   /* IP filtering (reloadable — paths only; actual reload via ip_acl_reload) */
   char ip_blocklist[256];
   char ip_allowlist[256];
