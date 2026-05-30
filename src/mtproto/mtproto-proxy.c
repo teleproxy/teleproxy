@@ -1768,7 +1768,7 @@ void mtfront_pre_init (void) {
   }
 
   for (i = 0; i < http_ports_num; i++) {
-    http_sfd[i] = server_socket (http_port[i], engine_state->settings_addr, engine_get_backlog (), enable_ipv6);
+    http_sfd[i] = server_socket (http_port[i], engine_state->settings_addr, engine_get_backlog (), enable_ipv6 | SM_LOWMSS);
     if (http_sfd[i] < 0) {
       kprintf ("cannot open http/tcp server socket at port %d: %m\n", http_port[i]);
       exit (1);

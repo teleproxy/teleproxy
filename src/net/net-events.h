@@ -117,6 +117,7 @@ extern struct in_addr settings_addr;
 #define	SM_SPECIAL	0x10000
 #define	SM_NOQACK	0x20000
 #define	SM_RAWMSG	0x40000
+#define	SM_LOWMSS	0x80000
 
 int server_socket (int port, struct in_addr in_addr, int backlog, int mode);
 int client_socket (in_addr_t in_addr, int port, int mode);
