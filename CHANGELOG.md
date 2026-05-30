@@ -3,15 +3,16 @@
 ## [4.14.0] - 2026-05-30
 
 - Automatic ClientHello fragmentation against TSPU JA4 fingerprinting (#39).
-  The MTProxy listening socket now announces a 128-byte TCP MSS in the SYN-ACK,
-  forcing the client kernel to chop its outgoing ClientHello across 4-5 TCP
-  segments. Single-packet JA4 extractors no longer see the full cipher list,
-  extensions, sig-algs and ALPN in one packet. No configuration; no client
-  change required. The HTTP `/stats` and `/metrics` listener keeps the system
-  default MSS. Trade-off: Linux caps server→client segments at the same MSS,
-  raising packet count ~10× and TCP/IP header overhead from ~3% to ~25% on
-  the proxy listener — measurable on bandwidth-saturated deployments but
-  preferable to the proxy being blocked.
+  The MTProxy listening socket now announces a 256-byte TCP MSS in the SYN-ACK,
+  forcing the client kernel to chop its outgoing ClientHello across 2-3 TCP
+  segments. ALPN and signature_algorithms — required inputs to JA4 — land in
+  segments 2/3, so a single-packet JA4 extractor computes the wrong hash and
+  the connection slips past the signature. No configuration; no client change
+  required. The HTTP `/stats` and `/metrics` listener keeps the system default
+  MSS. Trade-off: Linux caps server→client segments at the same MSS, raising
+  packet count ~5× and TCP/IP header overhead from ~3% to ~15% on the proxy
+  listener — measurable on bandwidth-saturated deployments but well within
+  the timeout of the existing 20MB MTProto E2E test.
 
 ## [4.13.0] - 2026-05-21
 

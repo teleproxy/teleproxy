@@ -39,11 +39,11 @@ Kích thước payload mã hóa của ServerHello thay đổi đến ±32 byte g
 
 ### Buộc phân mảnh ClientHello (tự động)
 
-Teleproxy thông báo TCP MSS nhỏ (128 byte) trong SYN-ACK trên cổng nghe công khai của proxy. Kernel của client tuân theo giới hạn và chia ClientHello gửi đi (~500-700 byte) thành 4-5 đoạn TCP. Danh sách cipher, phần mở rộng, thuật toán chữ ký và ALPN đều nằm trên ranh giới đoạn — DPI tính JA4 từ một gói tin chỉ thấy một mảnh của dữ liệu cần thiết.
+Teleproxy thông báo TCP MSS nhỏ (256 byte) trong SYN-ACK trên cổng nghe công khai của proxy. Kernel của client tuân theo giới hạn và chia ClientHello gửi đi (~500-700 byte) thành 2-3 đoạn TCP. Danh sách cipher, phần mở rộng, thuật toán chữ ký và ALPN đều nằm trên ranh giới đoạn — DPI tính JA4 từ một gói tin chỉ thấy một mảnh của dữ liệu cần thiết.
 
 Hoạt động tự động, không cần cấu hình, áp dụng với client Telegram không sửa đổi trên mọi nền tảng. Listener HTTP `/stats` / `/metrics` dùng MSS hệ thống mặc định và không bị ảnh hưởng.
 
-Đánh đổi: Linux áp dụng MSS của socket nghe cho cả hai hướng của mỗi kết nối được chấp nhận, nên các đoạn server→client cũng bị giới hạn ở 128 byte. Số gói tin tăng khoảng 10 lần và phần overhead TCP/IP header tăng từ ~3% lên ~25%. Trên phần cứng hiện đại có TSO/GSO, chi phí CPU vẫn quản lý được, nhưng các proxy bão hòa băng thông sẽ thấy giới hạn thông lượng đáng kể. Mặc định bật phân mảnh — với hầu hết người dùng, một proxy hoạt động nhưng chậm hơn vẫn tốt hơn một proxy nhanh bị chặn.
+Đánh đổi: Linux áp dụng MSS của socket nghe cho cả hai hướng của mỗi kết nối được chấp nhận, nên các đoạn server→client cũng bị giới hạn ở 256 byte. Số gói tin tăng khoảng 5 lần và phần overhead TCP/IP header tăng từ ~3% lên ~15%. Trên phần cứng hiện đại có TSO/GSO, chi phí CPU vẫn quản lý được, nhưng các proxy bão hòa băng thông sẽ thấy giới hạn thông lượng đáng kể. Mặc định bật phân mảnh — với hầu hết người dùng, một proxy hoạt động nhưng chậm hơn vẫn tốt hơn một proxy nhanh bị chặn.
 
 ### Ngẫu nhiên hóa GREASE
 

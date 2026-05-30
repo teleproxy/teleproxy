@@ -599,8 +599,14 @@ int server_socket (int port, struct in_addr in_addr, int backlog, int mode) {
       /* Announce a small MSS in the SYN-ACK so the client kernel fragments
          its first packet across multiple TCP segments. Defeats single-packet
          JA4 fingerprinting of the ClientHello in fake-TLS mode without
-         requiring any cooperation from the Telegram client. */
-      int mss = 128;
+         requiring any cooperation from the Telegram client.
+
+         256 bytes is the smallest value that still passes our 20MB E2E
+         test through the Telegram test DC in the workflow timeout. A
+         typical ~500-700 byte ClientHello splits into 2-3 segments at
+         this MSS, with ALPN and signature_algorithms (both required for
+         the JA4 hash) landing in segment 2 or 3. */
+      int mss = 256;
       if (setsockopt (socket_fd, IPPROTO_TCP, TCP_MAXSEG, &mss, sizeof (mss)) < 0) {
         vkprintf (1, "TCP_MAXSEG clamp to %d on socket #%d failed: %m\n", mss, socket_fd);
       }
