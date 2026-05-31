@@ -91,7 +91,7 @@ int hexdump (const void *start, const void *end) {
       }
     }
     s[p ++] = '\n';
-    nck_write (2, s, p);
+    write (2, s, p);
     ptr += 16;
   }
   return end - start;
@@ -207,8 +207,4 @@ void kprintf (const char *format, ...) {
   while (write (2, mp_kprintf_buf, n) < 0 && errno == EINTR);
   //while (flock (2, LOCK_UN) < 0 && errno == EINTR);
   errno = old_errno;
-}
-
-void nck_write (int fd, const void *data, size_t len) {
-  if (write (fd, data, len)) {}
 }

@@ -45,5 +45,3 @@ void kprintf (const char *format, ...) __attribute__ ((format (printf, 1, 2)));
     } \
     kprintf ((format), ##__VA_ARGS__); \
   } while (0)
-
-void nck_write (int fd, const void *data, size_t len);
