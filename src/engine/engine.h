@@ -202,7 +202,6 @@ ENGINE_INT_PARAM(required_cpu_threads,required_cpu_threads);
 ENGINE_INT_PARAM(required_tcp_cpu_threads,required_tcp_cpu_threads);
 ENGINE_INT_PARAM(required_tcp_io_threads,required_tcp_io_threads);
 
-void reopen_logs (void);
 int default_main (server_functions_t *F, int argc, char *argv[]);
 void default_parse_extra_args (int argc, char *argv[]);
 void engine_tl_init (struct tl_act_extra *(*parse)(struct tl_in_state *,long long), void (*stat)(), int (get_op)(struct tl_in_state *), double timeout, const char *name);

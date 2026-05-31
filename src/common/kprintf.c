@@ -69,10 +69,6 @@ void reopen_logs_ext (int slave_mode) {
   }
 }
 
-void reopen_logs (void) {
-  reopen_logs_ext (0);
-}
-
 int hexdump (const void *start, const void *end) {
   char s[256];
   const char *ptr = start;
@@ -99,66 +95,6 @@ int hexdump (const void *start, const void *end) {
     ptr += 16;
   }
   return end - start;
-}
-
-
-double reindex_speed = (32 << 20);
-
-void kdb_write (int fd, const void *buf, long long count, const char *filename) {
-  assert (count >= 0);
-
-  static double total_count;
-  static double last_time;
-  int write_fail_count = 0;
-  while (count) {
-    long long l = !reindex_speed ? count : count >= (1 << 20) ? (1 << 20) : count;
-
-    if (reindex_speed) {
-      double t = get_utime_monotonic ();
-      total_count = total_count * exp ((last_time - t) * 0.1);
-      last_time = t;
-
-      if (total_count > reindex_speed) {
-        double k = log (total_count / reindex_speed) * 10;
-        assert (k >= 0);
-        struct timespec ts;
-        ts.tv_nsec = ((int)((k - floor (k)) * 1e9)) % 1000000000;
-        ts.tv_sec = (int)k;
-        nanosleep (&ts, 0);
-      }
-    }
-    long long w = write (fd, buf, l);
-    if (w <= 0) {
-      assert (-1 <= w);
-      if (write_fail_count < 10000 && (w == 0 || errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
-        write_fail_count++;
-        continue;
-      }
-
-      fprintf (stderr, "kdb_write: write %lld bytes to the file '%s' returns %lld. %m\n", l, filename, w);
-      exit (1);
-    }
-    assert (w <= l);
-    write_fail_count = 0;
-
-    if (reindex_speed) {
-      static long long data_after_fsync;
-      data_after_fsync += w;
-      if (data_after_fsync >= (1 << 20)) {
-        if (fsync (fd) < 0) {
-          fprintf (stderr, "kdb_write: fsyncing file '%s' failed. %m\n", filename);
-          exit (1);
-        }
-        data_after_fsync = 0;
-      }
-      double t = get_utime_monotonic ();
-      total_count = total_count * exp ((last_time - t) * 0.1);
-      last_time = t;
-      total_count += w * 0.1;
-    }
-    count -= w;
-    buf += w;
-  }
 }
 
 static inline void kwrite_print_int (char **s, const char *name, int name_len, int i) {
@@ -275,8 +211,4 @@ void kprintf (const char *format, ...) {
 
 void nck_write (int fd, const void *data, size_t len) {
   if (write (fd, data, len)) {}
-}
-
-void nck_pwrite (int fd, const void *data, size_t len, off_t offset) {
-  if (pwrite (fd, data, len, offset)) {}
 }
