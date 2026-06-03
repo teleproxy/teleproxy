@@ -83,3 +83,58 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
+
+  dead-symbols:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install build deps
+      run: sudo apt-get update && sudo apt-get install -y build-essential libssl-dev zlib1g-dev
+
+    - name: Build with --gc-sections probe
+      run: |
+        make clean
+        make -j$(nproc) \
+          EXTRA_CFLAGS="-ffunction-sections -fdata-sections" \
+          EXTRA_LDFLAGS="-Wl,--gc-sections -Wl,--print-gc-sections" \
+          2>&1 | tee build.log
+
+    - name: Flag dead source-level symbols
+      run: |
+        set -e
+        # ld emits one line per collected section:
+        #   ld: removing unused section '.text.<sym>' in file '...(<obj>.o)'
+        # We want every .text.* removal; the path/archive form doesn't matter
+        # because only our own src/ objects are compiled with -ffunction-sections
+        # (system libs are linked as shared libs and don't appear here).
+        sed -nE \
+          "s|.*removing unused section '\.text\.([^']+)'.*[/(]([A-Za-z0-9_-]+)\.o['\)].*|\1\t\2|p" \
+          build.log | sort -u > dead.tsv
+        echo "Linker collected $(wc -l < dead.tsv) .text section(s):"
+        cat dead.tsv || true
+
+        bad=0
+        while IFS=$'\t' read -r sym obj; do
+          [ -n "$sym" ] || continue
+          # Look for source-level references. Filter out:
+          #   - the definition line (open-brace, no semicolon)
+          #   - pure comment lines
+          #   - weak-attribute declarations (legacy KittenDB stubs)
+          uses=$(git grep -nw "$sym" -- '*.c' '*.h' 2>/dev/null \
+            | grep -vE "^[^:]+:[0-9]+:[[:space:]]*[a-zA-Z_].*${sym}[[:space:]]*\([^;]*$" \
+            | grep -vE "^[^:]+:[0-9]+:[[:space:]]*//" \
+            | grep -vE '__attribute__.*weak' \
+            | grep -c . || true)
+          if [ "${uses:-0}" -eq 0 ]; then
+            echo "::error::Dead symbol '${sym}' in ${obj}.o has no source-level callers; remove the definition"
+            bad=$((bad+1))
+          else
+            echo "ok: ${sym} (${obj}.o): ${uses} source reference(s), compiler-inlined but alive in source"
+          fi
+        done < dead.tsv
+
+        if [ "$bad" -gt 0 ]; then
+          echo "::error::${bad} dead symbol(s) detected"
+          exit 1
+        fi
