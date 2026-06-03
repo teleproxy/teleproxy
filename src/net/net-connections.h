@@ -334,7 +334,6 @@ struct connections_stat {
 static inline const char *show_ip46 (unsigned ip, const unsigned char ipv6[16]) { return ip ? show_ip (ip) : show_ipv6 (ipv6); }
 static inline const char *show_our_ip (connection_job_t c) { return show_ip46 (CONN_INFO(c)->our_ip, CONN_INFO(c)->our_ipv6); }
 static inline const char *show_remote_ip (connection_job_t c) { return show_ip46 (CONN_INFO(c)->remote_ip, CONN_INFO(c)->remote_ipv6); }
-static inline const char *show_our_socket_ip (socket_connection_job_t c) { return show_ip46 (SOCKET_CONN_INFO(c)->our_ip, SOCKET_CONN_INFO(c)->our_ipv6); }
 static inline const char *show_remote_socket_ip (socket_connection_job_t c) { return show_ip46 (SOCKET_CONN_INFO(c)->remote_ip, SOCKET_CONN_INFO(c)->remote_ipv6); }
 
 void fetch_connections_stat (struct connections_stat *st);
@@ -356,9 +355,6 @@ int destroy_target (JOB_REF_ARG (CTJ));
 conn_target_job_t create_target (struct conn_target_info *source, int *was_created);
 void compute_next_reconnect (conn_target_job_t CT);
 
-
-static inline connection_job_t connection_incref (connection_job_t C) { return job_incref (C); }
-static inline void connection_decref (connection_job_t C) { job_decref (JOB_REF_PASS (C)); }
 
 connection_job_t connection_get_by_fd (int fd);
 connection_job_t connection_get_by_fd_generation (int fd, int generation);
@@ -389,10 +385,6 @@ void connection_write_close (connection_job_t C);
 #define write_out_chk(c,data,len) assert(write_out (&CONN_INFO(c)->Out, data, len) == len);
 #define write_out_old(c,data,len) write_out(&CONN_INFO(c)->Out, data, len)
 #define read_in_old(c,data,len) read_in(&CONN_INFO(c)->In, data, len)
-
-static inline int is_ipv6_localhost (unsigned char ipv6[16]) {
-  return !*(long long *)ipv6 && ((long long *)ipv6)[1] == 1LL << 56;
-}
 
 void assert_net_cpu_thread (void);
 void assert_net_net_thread (void);
