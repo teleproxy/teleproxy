@@ -21,41 +21,6 @@
               2014-2016 Vitaly Valtman     
 */
 
-struct tree_any_ptr {
-  struct tree_any_ptr *left, *right;
-  void *x;
-  int y;
-};
-
-static inline void tree_act_any (struct tree_any_ptr *T, void (*f)(void *)) {
-  if (!T) { return; }
-  tree_act_any (T->left, f);
-  f (T->x);
-  tree_act_any (T->right, f);
-}
-
-static inline void tree_act_any_ex (struct tree_any_ptr *T, void (*f)(void *, void *), void *extra) {
-  if (!T) { return; }
-  tree_act_any_ex (T->left, f, extra);
-  f (T->x, extra);
-  tree_act_any_ex (T->right, f, extra);
-}
-
-static inline void tree_act_any_ex2 (struct tree_any_ptr *T, void (*f)(void *, void *, void *), void *extra, void *extra2) {
-  if (!T) { return; }
-  tree_act_any_ex2 (T->left, f, extra, extra2);
-  f (T->x, extra, extra2);
-  tree_act_any_ex2 (T->right, f, extra, extra2);
-}
-
-static inline void tree_act_any_ex3 (struct tree_any_ptr *T, void (*f)(void *, void *, void *, void *), void *extra, void *extra2, void *extra3) {
-  if (!T) { return; }
-  tree_act_any_ex3 (T->left, f, extra, extra2, extra3);
-  f (T->x, extra, extra2, extra3);
-  tree_act_any_ex3 (T->right, f, extra, extra2, extra3);
-}
-
-
 #define DEFINE_HASH(prefix,name,value_t,value_compare,value_hash) \
   prefix hash_elem_ ## name ## _t *hash_lookup_ ## name (hash_table_ ## name ## _t *T, value_t x) __attribute__ ((unused)); \
   prefix void hash_insert_ ## name (hash_table_ ## name ## _t *T, value_t x) __attribute__ ((unused)); \
