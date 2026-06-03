@@ -175,34 +175,6 @@ int am_get_memory_stats (am_memory_stat_t *S, int flags) {
   return 0;
 }
 
-struct stat_fun_en {
-  stat_fun_t func;
-  struct stat_fun_en *next;
-};
-struct stat_fun_en *stat_func_first = NULL;
-
-int sb_register_stat_fun (stat_fun_t func) {
-  struct stat_fun_en *last = NULL, *p;
-  for (p = stat_func_first; p; p = p->next) {
-    last = p;
-    if (p->func == func) {
-      return 0;
-    }
-  }
-  p = malloc (sizeof (*p));
-  if (!p) {
-    return -1;
-  }
-  p->func = func;
-  p->next = NULL;
-  if (last) {
-    last->next = p;
-  } else {
-    stat_func_first = p;
-  }
-  return 1;
-}
-
 /************************ stats buffer functions **********************************/
 void sb_init (stats_buffer_t *sb, char *buff, int size) {
   sb->buff = buff;
@@ -242,19 +214,11 @@ static int sb_full (stats_buffer_t *sb) {
   return (sb->pos == sb->size - 1 && sb->buff[sb->pos]) || sb->pos >= sb->size;
 }
 
+/* cppcheck-suppress unusedFunction ; called from mtfront_prepare_stats() in src/mtproto/mtproto-proxy-stats.c (cppcheck misses the cross-TU call) */
 void sb_prepare (stats_buffer_t *sb) {
   sb->pos = prepare_stats (sb->buff, sb->size);
   if (sb_full (sb)) {
     sb_truncate (sb);
-    return;
-  }
-  struct stat_fun_en *p;
-  for (p = stat_func_first; p; p = p->next) {
-    p->func (sb);
-    if (sb_full (sb)) {
-      sb_truncate (sb);
-      return;
-    }
   }
 }
 
@@ -281,6 +245,7 @@ void sb_printf (stats_buffer_t *sb, const char *format, ...) {
 }
 /************************************************************************************/
 
+/* cppcheck-suppress unusedFunction ; called from mtfront_prepare_stats() in src/mtproto/mtproto-proxy-stats.c (cppcheck misses the cross-TU call) */
 void sb_memory (stats_buffer_t *sb, int flags) {
   am_memory_stat_t S;
   if (!am_get_memory_stats (&S, flags & AM_GET_MEMORY_USAGE_SELF)) {
@@ -301,10 +266,6 @@ void sb_memory (stats_buffer_t *sb, int flags) {
   }
 }
 
-void sb_print_queries (stats_buffer_t *sb, const char *const desc, long long q) {
-  sb_printf (sb, "%s\t%lld\nqps_%s\t%.3lf\n", desc, q, desc, safe_div (q, now - start_time));
-}
-
 int sb_sum_i (void **base, int len, int offset) {
   int res = 0;
   int i;
@@ -321,25 +282,4 @@ long long sb_sum_ll (void **base, int len, int offset) {
     res += *(long long *)((base[i]) + offset);
   }
   return res;
-}
-
-double sb_sum_f (void **base, int len, int offset) {
-  double res = 0;
-  int i;
-  for (i = 0; i < len; i++) if (base[i]) {
-    res += *(double *)((base[i]) + offset);
-  }
-  return res;
-}
-
-void sbp_print_date (stats_buffer_t *sb, const char *key, time_t unix_time) {
-  struct tm b;
-  struct tm *t = gmtime_r (&unix_time, &b);
-  if (t) {
-    char s[256];
-    size_t l = strftime (s, sizeof (s), "%c", t);
-    if (l > 0) {
-      sb_printf (sb, "%s\t%s\n", key, s);
-    }
-  }
 }

@@ -10,6 +10,7 @@ fuzz/*.o
 fuzz/crash-*
 fuzz/oom-*
 fuzz/timeout-*
+build-deadcode.log
 *.dSYM/
 # Docs: ignore all markdown except shipped docs and mkdocs site
 *.md
