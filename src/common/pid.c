@@ -76,12 +76,3 @@ int matches_pid (npid_t *X, npid_t *Y) {
   }
 }
 
-int process_id_is_newer (struct process_id *a, struct process_id *b) {
-  assert (!memcmp (a, b, 6));
-  if (a->utime < b->utime) { return 0; }
-  if (a->utime > b->utime) { return 1; }
-  int x = (a->pid - b->pid) & 0x7fff;
-  if (x && x <= 0x3fff) { return 1; }
-  return 0;
-}
-

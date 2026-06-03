@@ -54,5 +54,3 @@ void init_server_PID (unsigned ip, int port);
 
 /* returns 1 if X is a special case of Y, 2 if they match completely */
 int matches_pid (struct process_id *X, struct process_id *Y);
-
-int process_id_is_newer (struct process_id *a, struct process_id *b);
