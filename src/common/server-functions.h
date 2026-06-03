@@ -90,6 +90,9 @@ void init_parse_options (unsigned keep_mask, const unsigned *keep_options_custom
 
 int parse_engine_options_long (int argc, char **argv);
 int parse_usage (void);
+int default_parse_option_func (int a);
+const char *get_version_string (void);
+void usage (void);
 void parse_option (const char *name, int arg, int *var, int val, const char *help, ...) __attribute__ ((format (printf, 5, 6)));
 void parse_option_ex (const char *name, int arg, int *var, int val, unsigned flags, int (*func)(int), const char *help, ...) __attribute__ ((format (printf, 7, 8)));
 

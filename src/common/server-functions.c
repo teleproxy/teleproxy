@@ -140,11 +140,6 @@ int raise_file_rlimit (int maxfiles) {
 }
 
 
-const char *get_version_string (void) __attribute__ ((weak));
-const char *get_version_string (void) {
-  return "unknown compiled at " __DATE__ " " __TIME__ " by gcc " __VERSION__;
-}
-
 void print_backtrace (void) {
 #ifdef __GLIBC__
   void *buffer[64];
@@ -213,9 +208,6 @@ void ksignal_ex (int sig, void (*handler) (int, siginfo_t *, void *)) {
   }
 }
 
-void engine_set_terminal_attributes (void) __attribute__ ((weak));
-void engine_set_terminal_attributes (void) {}
-
 void extended_debug_handler (int sig, siginfo_t *info, void *cont) {
   ksignal (sig, SIG_DFL);
 
@@ -266,13 +258,6 @@ void set_debug_handlers (void) {
   debug_main_pthread_id = pthread_self ();
 }
 
-void usage (void) __attribute ((weak));
-
-void usage (void) {
-  printf ("usage: %s <args>\n",
-    progname ? progname : "SOMETHING");
-  exit (2);
-}
 
 long long parse_memory_limit (const char *s) {
   long long x;
@@ -313,9 +298,6 @@ int find_parse_option (int val) {
   }
   return -1;
 }
-
-int default_parse_option_func (int a) __attribute__ ((weak));
-int default_parse_option_func (int a) { return -1; }
 
 void parse_option_up (struct engine_parse_option *P) {
   struct engine_parse_option *Q = P - 1;
@@ -610,11 +592,6 @@ int parse_engine_options_long (int argc, char **argv) {
   }
   return 0;
 }
-
-void engine_add_net_parse_options (void) __attribute__ ((weak));
-void engine_add_net_parse_options (void) {}
-void engine_add_engine_parse_options (void) __attribute__ ((weak));
-void engine_add_engine_parse_options (void) {}
 
 void add_builtin_parse_options (void) {
   parse_option_builtin ("verbosity", optional_argument, 0, 'v', LONGOPT_COMMON_SET, "sets or increases verbosity level");
