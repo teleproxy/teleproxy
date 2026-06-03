@@ -283,12 +283,6 @@ void job_change_signals (job_t job, unsigned long long job_signals);
 int schedule_job (JOB_REF_ARG (job));
 
 job_t job_incref (job_t job);
-static inline job_t job_incref_f (job_t job) {
-  if (job) {
-    job_incref (job);
-  }
-  return job;
-}
 void job_decref (JOB_REF_ARG (job));	// if job->j_refcnt becomes 0, invokes j_execute with op = JS_FREE
 static inline void job_decref_f (job_t job) {
   job_decref (JOB_REF_PASS (job));
@@ -312,9 +306,6 @@ static inline int check_parent_job_validity (job_t job) {
 }
 static inline int parent_job_aborted (job_t job) {
   return (job->j_status & JSP_PARENT_INCOMPLETE) && job->j_parent && check_job_completion (job->j_parent);
-}
-static inline int job_parent_ptr_valid (job_t job) {
-  return (!(job->j_status & JSP_PARENT_RESPTR) || check_parent_job_validity (job));
 }
 static inline int job_fatal (job_t job, int error) {
   if (!job->j_error) {
@@ -369,17 +360,7 @@ static inline void check_thread_class (int class) {
 void job_message_send (JOB_REF_ARG (job), JOB_REF_ARG (src), unsigned int type, struct raw_message *raw, int dup, int payload_ints, const unsigned int *payload, unsigned int flags, void (*destructor)(struct job_message *M));
 void job_message_send_fake (JOB_REF_ARG (job), int (*receive_message)(job_t job, struct job_message *M, void *extra), void *extra, JOB_REF_ARG (src), unsigned int type, struct raw_message *raw, int dup, int payload_ints, const unsigned int *payload, unsigned int flags, void (*destructor)(struct job_message *M));
 //void job_message_send_data (JOB_REF_ARG (job), JOB_REF_ARG (src), unsigned int type, void *ptr1, void *ptr2, int int1, long long long1, int payload_ints, const unsigned int *payload, unsigned int flags);
-static inline void job_message_send_empty (JOB_REF_ARG (job), JOB_REF_ARG (src), unsigned int type, unsigned int flags) {
-  job_message_send (JOB_REF_PASS (job), JOB_REF_PASS (src), type, &empty_rwm, 1, 0, NULL, flags, NULL);
-}
-    
 #define TL_TRUE 0x3fedd339
-static inline int job_message_answer_true (struct job_message *M) {    
-  if (M->src) {
-    job_message_send (JOB_REF_PASS (M->src), JOB_REF_NULL, TL_TRUE, &empty_rwm, 1, M->payload_ints, M->payload, JMC_EXTRACT_ANSWER (M->flags), NULL);
-  }
-  return 1;
-}
 
 static inline int job_message_continuation (job_t job, struct job_message *M, int payload_magic) {
   if (M->payload_ints >= 1) {
@@ -414,18 +395,6 @@ struct job_message_payload {
   int payload_ints;
   unsigned int payload[0];
 };
-
-static inline struct job_message_payload *job_message_payload_alloc (JOB_REF_ARG (job), int message_class, int payload_ints, unsigned int *payload) {
-  struct job_message_payload *P = malloc (sizeof (*P) + 4 * payload_ints);
-  if (!P) {
-    return NULL;
-  }
-  P->message_class = message_class;
-  P->payload_ints = payload_ints;
-  P->job = PTR_MOVE (job);
-  memcpy (P->payload, payload, 4 * payload_ints);
-  return P;
-}
 
 long long jobs_get_allocated_memoty (void);
 
