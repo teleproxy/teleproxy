@@ -309,22 +309,6 @@ int aes_create_keys (struct aes_key_data *R, int am_client, const char nonce_ser
   return 1;
 }
 
-int get_crypto_key_id (void) {
-  if (main_secret.secret_len >= 4) {
-    return main_secret.key_signature;
-  } else {
-    return 0;
-  }
-}
-
-int get_extra_crypto_key_ids (int *buf, int max) {
-  return 0;
-}
-
-int is_valid_crypto_key_id (int x) {
-  return x && x == main_secret.key_signature && main_secret.secret_len >= 4;
-}
-
 void free_crypto_temp (void *crypto, int len) {
   memset (crypto, 0, len);
   free (crypto);
