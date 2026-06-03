@@ -63,8 +63,6 @@ long long max_queries_allocated_prev_sec;
 long long total_vv_tree_nodes;
 
 int tl_rpc_op_stat __attribute__ ((weak));
-int op_stat_write (stats_buffer_t *sb) __attribute__ ((weak));
-int op_stat_write (stats_buffer_t *sb) { return 0; }
 
 
 int my_pid;
@@ -83,10 +81,6 @@ int timers_prepare_stat (stats_buffer_t *sb);
 int rpc_targets_prepare_stat (stats_buffer_t *sb);
 
 //static double safe_div (double x, double y) { return y > 0 ? x/y : 0; }
-
-int recent_idle_percent (void) {
-  return a_idle_quotient > 0 ? a_idle_time / a_idle_quotient * 100 : a_idle_time;
-}
 
 extern long long epoll_calls;
 extern long long epoll_intr;
@@ -155,12 +149,4 @@ int prepare_stats (char *buff, int buff_size) {
     "stats_generate_time\t%.6f\n",
     get_utime_monotonic () - um);
   return sb.pos;
-}
-
-void output_std_stats (void) {
-  static char debug_stats[1 << 20];
-  int len = prepare_stats (debug_stats, sizeof (debug_stats) - 1);
-  if (len > 0) {
-    kprintf ("-------------- network statistics ------------\n%s\n-------------------------------------\n", debug_stats);
-  }
 }
