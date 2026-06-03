@@ -120,36 +120,6 @@ int change_user_group (const char *username, const char *groupname) {
   return 0;
 }
 
-int change_user (const char *username) {
-  struct passwd *pw;
-  /* lose root privileges if we have them */
-  if (getuid() == 0 || geteuid() == 0) {
-    if (username == 0 || *username == '\0') {
-      username = DEFAULT_ENGINE_USER;
-//      fprintf (stderr, "can't run as root without the -u switch\n");
-//      return -1;
-    }
-    if ((pw = getpwnam (username)) == 0) {
-      kprintf ("can't find the user %s to switch to\n", username);
-      return -1;
-    }
-    gid_t gid = pw->pw_gid;
-    if (setgroups(1, &gid) < 0) {
-      kprintf ("failed to clear supplementary groups list: %m\n");
-      return -1;
-    }
-    if (initgroups(username, gid) != 0) {
-      kprintf ("failed to load groups of user %s: %m\n", username);
-      return -1;
-    }
-    if (setgid (pw->pw_gid) < 0 || setuid (pw->pw_uid) < 0) {
-      kprintf ("failed to assume identity of user %s\n", username);
-      return -1;
-    }
-  }
-  return 0;
-}
-
 int raise_file_rlimit (int maxfiles) {
   struct rlimit rlim;
   
@@ -242,9 +212,6 @@ void ksignal_ex (int sig, void (*handler) (int, siginfo_t *, void *)) {
     _exit (EXIT_FAILURE);
   }
 }
-
-void queries_log_store (void *N, int limit, int max_size, int max_entry_size, int plain) __attribute__ ((weak));
-void queries_log_store (void *N, int limit, int max_size, int max_entry_size, int plain) {}
 
 void engine_set_terminal_attributes (void) __attribute__ ((weak));
 void engine_set_terminal_attributes (void) {}
@@ -347,20 +314,6 @@ int find_parse_option (int val) {
   return -1;
 }
 
-int find_parse_option_name (const char *name) {
-  int i;
-  for (i = 0; i < engine_parse_options_num; i++) {
-    struct engine_parse_option *P = &engine_parse_options[i];
-    int j;
-    for (j = 0; j < P->longopts_cnt; j++) {
-      if (!strcmp (P->longopts[j], name)) {
-        return i;
-      }
-    }
-  }
-  return -1;
-}
-
 int default_parse_option_func (int a) __attribute__ ((weak));
 int default_parse_option_func (int a) { return -1; }
 
@@ -375,20 +328,6 @@ void parse_option_up (struct engine_parse_option *P) {
     T = *P;
     memmove (Q + 1, Q, (P - Q) * sizeof (struct engine_parse_option));
     *Q = T;
-  }
-}
-
-void parse_option_down (struct engine_parse_option *P) {
-  struct engine_parse_option *Q = P + 1;
-  while (Q < engine_parse_options + engine_parse_options_num && Q->smallest_val < P->smallest_val) {
-    Q ++;
-  }
-  Q --;
-  if (Q != P) {
-    struct engine_parse_option T;
-    T = *Q;
-    memmove (P + 1, P, (P - Q) * sizeof (struct engine_parse_option));
-    *P = T;
   }
 }
 
@@ -436,6 +375,7 @@ void parse_option_ex (const char *name, int arg, int *var, int val, unsigned fla
   parse_option_internal (name, arg, var, val, flags, func, h);
 }
 
+// cppcheck-suppress unusedFunction ; variadic, called from src/mtproto/mtproto-proxy.c
 void parse_option (const char *name, int arg, int *var, int val, const char *help, ...) {
   char *h;
   va_list ap;
@@ -451,114 +391,7 @@ void parse_option_builtin (const char *name, int arg, int *var, int val, unsigne
   parse_option_internal (name, arg, var, val, flags, builtin_parse_option, help ? strdup (help) : NULL);
 }
 
-
-void remove_parse_option_completely (int val) {
-  int t = find_parse_option (val);
-  assert (t >= 0);
-
-  struct engine_parse_option *P = &engine_parse_options[t];
-
-  assert (P->vals[0] == val);
-  if (P->help) {
-    free (P->help);
-  }
-  free (P->vals);
-  free (P->longopts);
-  memmove (engine_parse_options + t, engine_parse_options + t + 1, (engine_parse_options_num - t - 1) * sizeof (struct engine_parse_option));
-  engine_parse_options_num --;
-  return;
-}
-
-void remove_parse_option (int val) {
-  int t = find_parse_option (val);
-  if (t < 0) {
-    kprintf ("Can not remove unknown option %d\n", val);
-    usage ();
-  }
-
-  struct engine_parse_option *P = &engine_parse_options[t];
-
-  if (P->val_cnt == 1) {
-    assert (P->vals[0] == val);
-    free (P->help);
-    free (P->vals);
-    free (P->longopts);
-    memmove (engine_parse_options + t, engine_parse_options + t + 1, (engine_parse_options_num - t - 1) * sizeof (struct engine_parse_option));
-    engine_parse_options_num --;
-    return;
-  }
-
-  int *new_vals = malloc (4 * (P->val_cnt - 1));
-  int i;
-  int p = 0;
-  for (i = 0; i < P->val_cnt; i++) {
-    if (P->vals[i] != val) {
-      new_vals[p ++] = P->vals[i];
-    }
-  }
-  free (P->vals);
-  P->vals = new_vals;
-  P->val_cnt --;
-
-  if (P->smallest_val == val) {
-    P->smallest_val = 0x7fffffff;
-    int i;
-    for (i = 0; i < P->val_cnt; i++) {
-      if (P->vals[i] < P->smallest_val) {
-        P->smallest_val = P->vals[i];
-      }
-    }
-    parse_option_down (P);
-  }
-  if (P->base_val == val) {
-    P->base_val = P->smallest_val;
-  }
-}
-
-void parse_option_alias (const char *name, int val) {
-  int l = find_parse_option (val);
-  if (l >= 0) {
-    if (val >= 33 && val <= 127) {
-      kprintf ("Duplicate option `%c`\n", (char)val);
-    } else {
-      kprintf ("Duplicate option %d\n", val);
-    }
-    usage ();
-  }
-  l = find_parse_option_name (name);
-  if (l < 0) {
-    kprintf ("can't find option '%s'\n", name);
-    usage ();
-  }
-
-  struct engine_parse_option *P = &engine_parse_options[l];
-  P->val_cnt ++;
-  P->vals = realloc (P->vals, 4 * P->val_cnt);
-  P->vals[P->val_cnt - 1] = val;
-  if (val < P->smallest_val) {
-    P->smallest_val = val;
-    parse_option_up (P);
-  }
-}
-
-void parse_option_long_alias (const char *name, const char *alias_name) {
-  int l = find_parse_option_name (alias_name);
-  if (l >= 0) {
-    kprintf ("Duplicate option %s\n", alias_name);
-    usage ();
-  }
-  l = find_parse_option_name (name);
-  if (l < 0) {
-    kprintf ("can't find option '%s'\n", name);
-    usage ();
-  }
-
-  struct engine_parse_option *P = &engine_parse_options[l];
-  P->longopts_cnt ++;
-  P->longopts = realloc (P->longopts, sizeof (void *) * P->longopts_cnt);
-  P->longopts[P->longopts_cnt - 1] = alias_name;
-}
-
+// cppcheck-suppress unusedFunction ; called from src/mtproto/mtproto-proxy.c
 int parse_usage (void) {
   int max = 0;
 
@@ -774,16 +607,6 @@ int parse_engine_options_long (int argc, char **argv) {
         usage ();
       }
     }
-  }
-  return 0;
-}
-
-int in_keep_options_list (const unsigned *list, unsigned num) {
-  if (!list) { return 0; }
-  const unsigned *a = list;
-  while (*a) {
-    if (*a == num) { return 1; }
-    a ++;
   }
   return 0;
 }

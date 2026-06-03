@@ -47,7 +47,6 @@ extern "C" {
 extern int engine_options_num;
 extern char *engine_options[MAX_ENGINE_OPTIONS];
 
-int change_user (const char *username);
 int change_user_group (const char *username, const char *groupname);
 int raise_file_rlimit (int maxfiles);
 
@@ -85,7 +84,7 @@ struct engine_parse_option {
   int arg;
 };
 
-/* init_parse_option should be called before parse_option and parse_option_alias */
+/* init_parse_options should be called before parse_option */
 //void init_parse_options (int keep_mask, const unsigned char *keep_options_custom_list);
 void init_parse_options (unsigned keep_mask, const unsigned *keep_options_custom_list);
 
@@ -94,9 +93,6 @@ int parse_usage (void);
 void parse_option (const char *name, int arg, int *var, int val, const char *help, ...) __attribute__ ((format (printf, 5, 6)));
 void parse_option_ex (const char *name, int arg, int *var, int val, unsigned flags, int (*func)(int), const char *help, ...) __attribute__ ((format (printf, 7, 8)));
 
-void parse_option_alias (const char *name, int val);
-void parse_option_long_alias (const char *name, const char *alias_name);
-void remove_parse_option (int val);
 //void set_backlog (const char *arg);
 //void set_maxconn (const char *arg);
 long long parse_memory_limit (const char *s);
