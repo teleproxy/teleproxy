@@ -535,14 +535,6 @@ void engine_rpc_stats (struct tl_out_state *tlio_out) {
   tl_store_stats (tlio_out, data_buf, 0);
 }
 
-void output_engine_stats (void) {
-  int len = engine_prepare_stats ();
-  if (len > 0) {
-    kprintf ("-------------- network/memcache statistics ------------\n");
-    kwrite (2, data_buf, len);
-  }
-}
-
 int default_get_op (struct tl_in_state *tlio_in) {
   return tl_fetch_lookup_int ();
 }
