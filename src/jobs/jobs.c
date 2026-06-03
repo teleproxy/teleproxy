@@ -351,9 +351,6 @@ void update_all_thread_stats (void) {
   }
 }
 
-void wakeup_main_thread (void) __attribute__ ((weak));
-void wakeup_main_thread (void) {}
-
 #define JOB_THREAD_STACK_SIZE        (4 << 20)
 
 #define JTS_CREATED 1
@@ -1236,11 +1233,6 @@ int insert_job_into_job_list (job_t list_job, JOB_REF_ARG(job), int mode) {
   wj->jl_job = PTR_MOVE (job);
   wj->jl_flags = mode;
   return insert_node_into_job_list (list_job, (struct job_list_node *) wj);
-}
-
-int insert_connection_into_job_list (job_t list_job, connection_job_t c) {
-  assert (0);
-  return 0;
 }
 
 struct job_timer_manager_extra {
