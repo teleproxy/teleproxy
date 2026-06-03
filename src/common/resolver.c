@@ -352,10 +352,6 @@ int kdb_load_hosts (void) {
   return 1;
 }
 
-int parse_ipv6 (unsigned short ipv6[8], char *str) {
-  return -1;
-}
-
 struct hostent *kdb_gethostbyname (const char *name) {
   if (!kdb_hosts_loaded) {
     kdb_load_hosts ();
@@ -365,12 +361,6 @@ struct hostent *kdb_gethostbyname (const char *name) {
 
 
   if (name[0] == '[' && name[len-1] == ']' && len <= 64) {
-    /*
-    if (parse_ipv6 ((unsigned short *) ipv6_addr, name + 1) == len - 2) {
-      hret6.h_name = (char *)name;
-      return &hret6;
-    }
-    */
     char buf[64];
     memcpy (buf, name + 1, len - 2);
     buf[len - 2] = 0;
@@ -401,48 +391,3 @@ struct hostent *kdb_gethostbyname (const char *name) {
   return &hret;
 }
 
-char *detect_hostname (void) {
-  static char *hostname = NULL;
-  static char hostname_buffer[256];
-  int r, i;
-  if (!hostname || !*hostname) {
-    hostname = getenv ("HOSTNAME");
-    if (!hostname || !*hostname) {
-      int fd = open ("/etc/hostname", O_RDONLY);
-      if (fd < 0) {
-        kprintf ("cannot read /etc/hostname: %m\n");
-        exit (2);
-      }
-      r = read (fd, hostname_buffer, 256);
-      if (r <= 0 || r >= 256) {
-        kprintf ("cannot read hostname from /etc/hostname: %d bytes read\n", r);
-        exit (2);
-      }
-      hostname_buffer[r] = 0;
-      close (fd);
-      hostname = hostname_buffer;
-      while (*hostname == 9 || *hostname == 32) {
-        hostname++;
-      }
-      i = 0;
-      while (hostname[i] > 32) {
-        i++;
-      }
-      hostname[i] = 0;
-    }
-  }
-  if (!hostname || !*hostname) {
-    kprintf ("fatal: cannot detect hostname\n");
-    exit (2);
-  }
-  i = 0;
-  while ((hostname[i] >= '0' && hostname[i] <= '9') || hostname[i] == '.' || hostname[i] == '-' || hostname[i] == '_' || (hostname[i] >= 'A' && hostname[i] <= 'Z') || (hostname[i] >= 'a' && hostname[i] <= 'z')) {
-    i++;
-  }
-  if (hostname[i] || i >= 64) {
-    kprintf ("fatal: bad hostname '%s'\n", hostname);
-    exit (2);
-  }
-  vkprintf (1, "hostname is %s\n", hostname);
-  return hostname;
-}
