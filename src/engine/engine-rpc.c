@@ -89,10 +89,6 @@ struct tl_out_state *tl_aio_init_store (enum tl_type type, struct process_id *pi
 
 static long long queries_allocated;
 
-long long engine_get_allocated_queries (void) {
-  return queries_allocated;
-}
-
 
 #define rpc_custom_op_cmp(a,b) (a->op < b->op ? -1 : a->op > b->op ? 1 : 0)
 
@@ -245,26 +241,8 @@ static int process_act_atom_subjob (job_t job, int op, struct job_thread *JT);
 
 /* {{{ auto TL parse functions weak declaration */
 
-struct paramed_type *skip_function_any (struct tl_in_state *tlio_in) __attribute__ ((weak));
-struct paramed_type *skip_function_any (struct tl_in_state *tlio_in) { return NULL; }
-struct paramed_type *fetch_function_any (struct tl_in_state *tlio_in) __attribute__ ((weak));
-struct paramed_type *fetch_function_any (struct tl_in_state *tlio_in) { return NULL; }
-
-int skip_type_any (struct tl_in_state *tlio_in, struct paramed_type *P) __attribute__ ((weak));
-int skip_type_any (struct tl_in_state *tlio_in, struct paramed_type *P) { return -1; }
-int fetch_type_any (struct tl_in_state *tlio_in, struct paramed_type *P) __attribute__ ((weak));
-int fetch_type_any (struct tl_in_state *tlio_in, struct paramed_type *P) { return -1; }
-
-void free_vars_to_be_freed (void) __attribute__ ((weak));
-void free_vars_to_be_freed (void) {}
-void tl_printf_clear (void) __attribute__ ((weak));
-void tl_printf_clear (void) {}
-
 void paramed_type_free (struct paramed_type *P) __attribute__ ((weak));
 void paramed_type_free (struct paramed_type *P) {}
-
-struct paramed_type *paramed_type_dup (struct paramed_type *P) __attribute__ ((weak));
-struct paramed_type *paramed_type_dup (struct paramed_type *P) { return 0; }
 
 /* }}} */
 
