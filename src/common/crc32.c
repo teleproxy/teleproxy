@@ -637,10 +637,6 @@ static const uint64_t crc64_table[256] = {
 crc64_partial_func_t crc64_partial;
 crc64_combine_func_t compute_crc64_combine;
 
-uint64_t crc64_feed_byte (uint64_t crc, unsigned char b) {
-  return crc64_table[(crc ^ b) & 0xff] ^ (crc >> 8);
-}
-
 uint64_t crc64_partial_one_table (const void *data, long len, uint64_t crc) {
   const char *p = data;
   for (; len > 0; len--) {
@@ -714,15 +710,6 @@ unsigned gf32_mul (unsigned a, unsigned b, unsigned poly) {
     }
     b >>= 1;
   } while (++i < 32);
-  return x;
-}
-
-unsigned gf32_pow (unsigned a, int k, unsigned poly) {
-  if (!k) { return 0x80000000; }
-  unsigned x = gf32_pow (gf32_mul (a, a, poly), k >> 1, poly);
-  if (k & 1) {
-    x = gf32_mul (x, a, poly);
-  }
   return x;
 }
 
@@ -961,113 +948,6 @@ static uint64_t compute_crc64_combine_generic (uint64_t crc1, uint64_t crc2, int
     len2 >>= 1;
   }
   return crc1 ^ crc2;
-}
-
-/********************************* crc32 repair ************************/
-struct fcb_table_entry {
-  unsigned p; //zeta ^ k
-  int i;
-};
-
-static int cmp_fcb_table_entry (const void *a, const void *b) {
-  const struct fcb_table_entry *x = a;
-  const struct fcb_table_entry *y = b;
-  if (x->p < y->p) { return -1; }
-  if (x->p > y->p) { return  1; }
-  if (x->i < y->i) { return -1; }
-  if (x->i > y->i) { return  1; }
-  return 0;
-}
-
-int crc32_find_corrupted_bit (int size, unsigned d) {
-  int i, j;
-  size += 4;
-  int n = size << 3;
-  int r = (int) (sqrt (n) + 0.5);
-  vkprintf (3, "n = %d, r = %d, d = 0x%08x\n", n, r, d);
-  struct fcb_table_entry *T = calloc (r, sizeof (struct fcb_table_entry));
-  assert (T != NULL);
-  T[0].i = 0;
-  T[0].p = 0x80000000u;
-  for (i = 1; i < r; i++) {
-    T[i].i = i;
-    T[i].p = gf32_mulx (T[i-1].p, CRC32_REFLECTED_POLY);
-  }
-  assert (gf32_mulx (0xdb710641, CRC32_REFLECTED_POLY) == 0x80000000);
-  qsort (T, r, sizeof (T[0]), cmp_fcb_table_entry);
-  const unsigned q = gf32_pow (0xdb710641, r, CRC32_REFLECTED_POLY);
-
-  unsigned A[32];
-  A[31] = q;
-  for (i = 30; i >= 0; i--) {
-    A[i] = gf32_mulx (A[i+1], CRC32_REFLECTED_POLY);
-  }
-
-  unsigned x = d;
-  int max_j = n / r, res = -1;
-  for (j = 0; j <= max_j; j++) {
-    int a = -1, b = r;
-    while (b - a > 1) {
-      int c = ((a + b) >> 1);
-      if (T[c].p <= x) { a = c; } else { b = c; }
-    }
-    if (a >= 0 && T[a].p == x) {
-      res = T[a].i + r * j;
-      break;
-    }
-    x = gf32_matrix_times (A, x);
-  }
-  free (T);
-  return res;
-}
-
-int crc32_repair_bit (unsigned char *input, int l, int k) {
-  if (k < 0) {
-    return -1;
-  }
-  int idx = k >> 5, bit = k & 31, i = (l - 1) - (idx - 1) * 4;
-  while (bit >= 8) {
-    i--;
-    bit -= 8;
-  }
-  if (i < 0) {
-    return -2;
-  }
-  if (i >= l) {
-    return -3;
-  }
-  int j = 7 - bit;
-  input[i] = (unsigned char)(input[i] ^ (1 << j));
-  return 0;
-}
-
-int crc32_check_and_repair (void *input, int l, unsigned *input_crc32, int force_exit) {
-  unsigned computed_crc32 = compute_crc32 (input, l);
-  const unsigned crc32_diff = computed_crc32 ^ (*input_crc32);
-  if (!crc32_diff) {
-    return 0;
-  }
-  int k = crc32_find_corrupted_bit (l, crc32_diff);
-  vkprintf (3, "find_corrupted_bit returns %d.\n", k);
-  int r = crc32_repair_bit (input, l, k);
-  vkprintf (3, "repair_bit returns %d.\n", r);
-  if (!r) {
-    assert (compute_crc32 (input, l) == *input_crc32);
-    if (force_exit) {
-      kprintf ("crc32_check_and_repair successfully repair one bit in %d bytes block.\n", l);
-    }
-    return 1;
-  }
-  if (!(crc32_diff & (crc32_diff - 1))) { /* crc32_diff is power of 2 */
-    *input_crc32 = computed_crc32;
-    if (force_exit) {
-      kprintf ("crc32_check_and_repair successfully repair one bit in crc32 (%d bytes block).\n", l);
-    }
-    return 2;
-  }
-  assert (!force_exit);
-  *input_crc32 = computed_crc32;
-  return -1;
 }
 
 static void crc32_init (void) __attribute__ ((constructor));
