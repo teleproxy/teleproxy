@@ -43,10 +43,6 @@ extern "C" {
 # define BITS_STR "32"
 #endif
 
-#define MAX_ENGINE_OPTIONS 1000
-extern int engine_options_num;
-extern char *engine_options[MAX_ENGINE_OPTIONS];
-
 int change_user_group (const char *username, const char *groupname);
 int raise_file_rlimit (int maxfiles);
 

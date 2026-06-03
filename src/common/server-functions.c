@@ -72,9 +72,6 @@
 
 long long max_allocated_buffer_bytes __attribute__ ((weak));
 
-int engine_options_num;
-char *engine_options[MAX_ENGINE_OPTIONS];
-
 
 int start_time;
 
@@ -531,9 +528,6 @@ int parse_one_option (int val) {
 }
 
 int parse_engine_options_long (int argc, char **argv) {
-  engine_options_num = argc;
-  memcpy ((void *)engine_options, argv, sizeof (void *) * argc);
-
   int total_longopts = 0;
   int total_shortopts_len = 0;
   int i;
