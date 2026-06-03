@@ -1706,12 +1706,6 @@ void free_later_act (void) {
   }
 }
 
-void free_connection_tree_ptr (struct tree_connection *T) /* {{{ */ {
-  free_tree_ptr_connection (T);
-}
-/* }}} */ 
-
-
 void incr_active_dh_connections (void) {
   MODULE_STAT->active_dh_connections ++;
 }

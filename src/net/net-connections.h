@@ -411,7 +411,6 @@ int init_listening_connection (int fd, conn_type_t *type, void *extra);
 int init_listening_tcpv6_connection (int fd, conn_type_t *type, void *extra, int mode);
 
 //struct tree_connection *get_connection_tree_ptr (struct tree_connection **);
-//void free_connection_tree_ptr (struct tree_connection *);
 
 struct free_later {
   void *ptr;
