@@ -314,13 +314,6 @@ void free_msg_buffers_chunk_internal (struct msg_buffers_chunk *C, struct msg_bu
 }
 
 
-void free_msg_buffers_chunk (struct msg_buffers_chunk *C) {
-  assert (C->magic == MSG_CHUNK_USED_LOCKED_MAGIC);
-  assert (C->free_cnt[1] == C->tot_buffers);
-
-  free_msg_buffers_chunk_internal (C, C->ch_head);
-}
-
 int init_msg_buffers (long max_buffer_bytes) {
   if (!max_buffer_bytes) {
     max_buffer_bytes = max_allocated_buffer_bytes ?: MSG_DEFAULT_MAX_ALLOCATED_BYTES;
