@@ -233,13 +233,6 @@ int tls_header (struct tl_out_state *tlio_out, struct tl_query_header *header);
 
 int tls_end_ext (struct tl_out_state *tlio_out, int op);
 
-static inline int tlf_init_empty (struct tl_in_state *tlio_in) {
-  return tlf_init_str (tlio_in, "", 0);
-}
-
-static inline int tl_store_end_simple (struct tl_out_state *tlio_out) {
-  return tls_end_ext (tlio_out, 0);
-}
 #define tl_store_end_ext(type) tls_end_ext(tlio_out,type)
 
 static inline int tlf_check (struct tl_in_state *tlio_in, int nbytes) /* {{{ */ {
@@ -290,28 +283,6 @@ static inline int tlf_lookup_int (struct tl_in_state *tlio_in) /* {{{ */ {
 /* }}} */
 #define tl_fetch_lookup_int(...) tlf_lookup_int (tlio_in, ## __VA_ARGS__)
 
-static inline int tlf_lookup_second_int (struct tl_in_state *tlio_in) /* {{{ */ {
-  if (tlf_check (tlio_in, 8) < 0) {
-    return -1;
-  }
-  int x[2];
-  TL_IN_METHODS->fetch_lookup (tlio_in, x, 8);
-  return x[1];
-}
-/* }}} */
-#define tl_fetch_lookup_second_int(...) tlf_lookup_second_int (tlio_in, ## __VA_ARGS__)
-
-static inline long long tlf_lookup_long (struct tl_in_state *tlio_in) /* {{{ */ {
-  if (tlf_check (tlio_in, 8) < 0) {
-    return -1;
-  }
-  long long x;
-  TL_IN_METHODS->fetch_lookup (tlio_in, &x, 8);
-  return x;
-}
-/* }}} */
-#define tl_fetch_lookup_long(...) tlf_lookup_long (tlio_in, ## __VA_ARGS__)
-
 static inline int tlf_lookup_data (struct tl_in_state *tlio_in, void *data, int len) /* {{{ */ {
   if (tlf_check (tlio_in, len) < 0) {
     return -1;
@@ -333,17 +304,6 @@ static inline int tlf_int (struct tl_in_state *tlio_in) /* {{{ */ {
 /* }}} */
 #define tl_fetch_int(...) tlf_int (tlio_in, ## __VA_ARGS__)
 
-static inline double tlf_double (struct tl_in_state *tlio_in) /* {{{ */ {
-  if (__builtin_expect (tlf_check (tlio_in, sizeof (double)) < 0, 0)) {
-    return -1;
-  }
-  double x;
-  __tlf_raw_data (tlio_in, &x, sizeof (x));
-  return x;
-}
-/* }}} */
-#define tl_fetch_double(...) tlf_double (tlio_in, ## __VA_ARGS__)
-
 static inline long long tlf_long (struct tl_in_state *tlio_in) /* {{{ */ {
   if (__builtin_expect (tlf_check (tlio_in, 8) < 0, 0)) {
     return -1;
@@ -354,50 +314,6 @@ static inline long long tlf_long (struct tl_in_state *tlio_in) /* {{{ */ {
 }
 /* }}} */
 #define tl_fetch_long(...) tlf_long (tlio_in, ## __VA_ARGS__)
-
-static inline void tlf_mark (struct tl_in_state *tlio_in) /* {{{ */ {
-  TL_IN_METHODS->fetch_mark (tlio_in);
-}
-/* }}} */
-#define tl_fetch_mark(...) tlf_mark (tlio_in, ## __VA_ARGS__)
-
-static inline void tlf_mark_restore (struct tl_in_state *tlio_in) /* {{{ */ {
-  TL_IN_METHODS->fetch_mark_restore (tlio_in);
-}
-/* }}} */
-#define tl_fetch_mark_restore(...) tlf_mark_restore (tlio_in, ## __VA_ARGS__)
-
-static inline void tlf_mark_delete (struct tl_in_state *tlio_in) /* {{{ */ {
-  TL_IN_METHODS->fetch_mark_delete (tlio_in);
-}
-/* }}} */
-#define tl_fetch_mark_delete(...) tlf_mark_delete (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_string_len (struct tl_in_state *tlio_in, int max_len) /* {{{ */ {
-  if (tlf_check (tlio_in, 4) < 0) {
-    return -1;
-  }
-  int x = 0;
-  __tlf_raw_data (tlio_in, &x, 1);
-  if (x == 255) {
-    tlf_set_error (tlio_in, TL_ERROR_SYNTAX, "String len can not start with 0xff");
-    return -1;
-  }
-  if (x == 254) {
-    __tlf_raw_data (tlio_in, &x, 3);
-  }
-  if (x > max_len) {
-    tlf_set_error_format (tlio_in, TL_ERROR_TOO_LONG_STRING, "string is too long: max_len = %d, len = %d", max_len, x);
-    return -1;
-  }
-  if (x > TL_IN_REMAINING) {
-    tlf_set_error_format (tlio_in, TL_ERROR_NOT_ENOUGH_DATA, "string is too long: remaining_bytes = %d, len = %d", TL_IN_REMAINING, x);
-    return -1;
-  }
-  return x;
-}
-/* }}} */
-#define tl_fetch_string_len(...) tlf_string_len (tlio_in, ## __VA_ARGS__)
 
 static inline int tlf_pad (struct tl_in_state *tlio_in) /* {{{ */ {
   int pad = (-TL_IN_POS) & 3;
@@ -427,72 +343,6 @@ static inline int tlf_raw_data (struct tl_in_state *tlio_in, void *buf, int len)
 /* }}} */
 #define tl_fetch_raw_data(...) tlf_raw_data (tlio_in, ## __VA_ARGS__)
 
-static inline int tlf_string_data (struct tl_in_state *tlio_in, char *buf, int len) /* {{{ */ {
-  if (tlf_check (tlio_in, len) < 0) {
-    return -1;
-  }
-  __tlf_raw_data (tlio_in, buf, len);
-  if (tlf_pad (tlio_in) < 0) {
-    return -1;
-  }
-  return len;
-}
-/* }}} */
-#define tl_fetch_string_data(...) tlf_string_data (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_skip_string_data (struct tl_in_state *tlio_in, int len) /* {{{ */ {
-  if (tlf_check (tlio_in, len) < 0) {
-    return -1;
-  }
-  __tlf_skip_raw_data (tlio_in, len);
-  if (tlf_pad (tlio_in) < 0) {
-    return -1;
-  }
-  return len;
-}
-/* }}} */
-#define tl_fetch_skip_string_data(...) tlf_skip_string_data (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_string (struct tl_in_state *tlio_in, char *buf, int max_len) /* {{{ */ {
-  int l = tlf_string_len (tlio_in, max_len);
-  if (l < 0) {
-    return -1;
-  }
-  if (tlf_string_data (tlio_in, buf, l) < 0) {
-    return -1;
-  }
-  return l;
-}
-/* }}} */
-#define tl_fetch_string(...) tlf_string (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_skip_string (struct tl_in_state *tlio_in, int max_len) /* {{{ */ {
-  int l = tlf_string_len (tlio_in, max_len);
-  if (l < 0) {
-    return -1;
-  }
-  if (tlf_skip_string_data (tlio_in, l) < 0) {
-    return -1;
-  }
-  return l;
-}
-/* }}} */
-#define tl_fetch_skip_string(...) tlf_skip_string (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_string0 (struct tl_in_state *tlio_in, char *buf, int max_len) /* {{{ */ {
-  int l = tlf_string_len (tlio_in, max_len);
-  if (l < 0) {
-    return -1;
-  }
-  if (tlf_string_data (tlio_in, buf, l) < 0) {
-    return -1;
-  }
-  buf[l] = 0;
-  return l;
-}
-/* }}} */
-#define tl_fetch_string0(...) tlf_string0 (tlio_in, ## __VA_ARGS__)
-
 static inline int tlf_error (struct tl_in_state *tlio_in) /* {{{ */{
   return TL_ERROR != 0;
 }
@@ -508,16 +358,6 @@ static inline int tlf_end (struct tl_in_state *tlio_in) /* {{{ */ {
 }
 /* }}} */
 #define tl_fetch_end(...) tlf_end (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_check_str_end (struct tl_in_state *tlio_in, int size) /* {{{ */ {
-  if (TL_IN_REMAINING != size + ((-size - TL_IN_POS) & 3)) {
-    tlf_set_error_format (tlio_in, TL_ERROR_EXTRA_DATA, "extra %d bytes after query", TL_IN_REMAINING - size - ((-size - TL_IN_POS) & 3));    
-    return -1;
-  }
-  return 1;
-}
-/* }}} */
-#define tl_fetch_check_str_end(...) tlf_check_str_end (tlio_in, ## __VA_ARGS__)
 
 static inline int tlf_unread (struct tl_in_state *tlio_in) /* {{{ */ {
   return TL_IN_REMAINING;
@@ -599,12 +439,6 @@ static inline int tls_long (struct tl_out_state *tlio_out, long long x) /* {{{ *
 /* }}} */
 #define tl_store_long(...) tls_long (tlio_out, ## __VA_ARGS__)
 
-static inline int tls_double (struct tl_out_state *tlio_out, double x) /* {{{ */ {
-  assert (tls_check (tlio_out, 8) >= 0);
-  __tls_raw_data (tlio_out, &x, 8);
-  return 0;
-}
-/* }}} */
 #define tl_store_double(...) tls_double (tlio_out, ## __VA_ARGS__)
 
 static inline int tls_string_len (struct tl_out_state *tlio_out, int len) /* {{{ */ {
@@ -734,26 +568,6 @@ static inline int tlf_int_range (struct tl_in_state *tlio_in, int min, int max) 
 /* }}} */
 #define tl_fetch_int_range(...) tlf_int_range (tlio_in, ## __VA_ARGS__)
 
-static inline int tlf_positive_int (struct tl_in_state *tlio_in) {
-  return tlf_int_range (tlio_in, 1, 0x7fffffff);
-}
-#define tl_fetch_positive_int(...) tlf_positive_int (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_nonnegative_int (struct tl_in_state *tlio_in) {
-  return tlf_int_range (tlio_in, 0, 0x7fffffff);
-}
-#define tl_fetch_nonnegative_int(...) tlf_nonnegative_int (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_int_subset (struct tl_in_state *tlio_in, int set) /* {{{ */ {
-  int x = tlf_int (tlio_in);
-  if (x & ~set) {
-    tlf_set_error_format (tlio_in, TL_ERROR_VALUE_NOT_IN_RANGE, "Expected int32 with only bits 0x%02x allowed, 0x%02x presented", set, x);
-  }
-  return x;
-}
-/* }}} */
-#define tl_fetch_int_subset(...) tlf_int_subset (tlio_in, ## __VA_ARGS__)
-
 static inline long long tlf_long_range (struct tl_in_state *tlio_in, long long min, long long max) /* {{{ */ {
   long long x = tlf_long (tlio_in);
   if (x < min || x > max) {
@@ -762,52 +576,6 @@ static inline long long tlf_long_range (struct tl_in_state *tlio_in, long long m
   return x;
 }
 /* }}} */
-
-static inline long long tlf_positive_long (struct tl_in_state *tlio_in) {
-  return tlf_long_range (tlio_in, 1, 0x7fffffffffffffffll);
-}
-#define tl_fetch_positive_long(...) tlf_positive_long (tlio_in, ## __VA_ARGS__)
-
-static inline long long tlf_nonnegative_long (struct tl_in_state *tlio_in) {
-  return tlf_long_range (tlio_in, 0, 0x7fffffffffffffffll);
-}
-#define tl_fetch_nonnegative_long(...) tlf_nonnegative_long (tlio_in, ## __VA_ARGS__)
-
-static int _tlf_raw_message (struct tl_in_state *tlio_in, struct raw_message *raw, int len, int advance) {
-  if (__builtin_expect (tlf_check (tlio_in, len) < 0, 0)) {
-    return -1;
-  }
-
-  if (advance) {
-    TL_IN_METHODS->fetch_raw_message (tlio_in, raw, len);
-    TL_IN_POS += len;
-    TL_IN_REMAINING -= len;
-  } else {
-    TL_IN_METHODS->fetch_lookup_raw_message (tlio_in, raw, len);
-  }
-
-  return 0;
-}
-
-static inline int tlf_raw_message (struct tl_in_state *tlio_in, struct raw_message *raw, int bytes) {
-  return _tlf_raw_message (tlio_in, raw, bytes, 1);
-}
-#define tl_fetch_raw_message(...) tlf_raw_message (tlio_in, ## __VA_ARGS__)
-
-static inline int tlf_lookup_raw_message (struct tl_in_state *tlio_in, struct raw_message *raw, int bytes) {
-  return _tlf_raw_message (tlio_in, raw, bytes, 0);
-}
-#define tl_fetch_lookup_raw_message(...) tlf_lookup_raw_message (tlio_in, ## __VA_ARGS__)
-
-static inline void tlf_copy_error (struct tl_in_state *tlio_in, struct tl_out_state *tlio_out) {
-  if (!tlio_out->error) {
-    if (tlio_in->error) {
-      tlio_out->error = strdup (tlio_in->error);
-      tlio_out->errnum = tlio_in->errnum;
-    }
-  }
-}
-#define tl_copy_error(...) tlf_copy_error (tlio_in, tlio_out, ## __VA_ARGS__)
 
 struct tl_in_state *tl_in_state_alloc (void);
 void tl_in_state_free (struct tl_in_state *tlio_in);
