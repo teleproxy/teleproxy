@@ -35,10 +35,6 @@ extern "C" {
 extern crc32_partial_func_t crc32c_partial;
 extern crc32_combine_func_t compute_crc32c_combine;
 
-static inline unsigned compute_crc32c (const void *data, int len) {
-  return crc32c_partial (data, len, -1) ^ -1;
-}
-
 unsigned crc32c_partial_four_tables (const void *data, long len, unsigned crc);
 
 #ifdef __cplusplus
