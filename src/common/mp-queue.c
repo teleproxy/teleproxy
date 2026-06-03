@@ -400,14 +400,6 @@ void init_mp_queue_w (struct mp_queue *MQ) {
   MQ->mq_magic = MQ_MAGIC_SEM;
 }
 
-struct mp_queue *alloc_mp_queue (void) {
-  struct mp_queue *MQ = NULL;
-  assert (!posix_memalign ((void **)&MQ, 64, sizeof (*MQ)));
-  memset (MQ, 0, sizeof (*MQ));
-  init_mp_queue (MQ);
-  return MQ;
-}
-
 struct mp_queue *alloc_mp_queue_w (void) {
   struct mp_queue *MQ = NULL;
   assert (!posix_memalign ((void **)&MQ, 64, sizeof (*MQ)));

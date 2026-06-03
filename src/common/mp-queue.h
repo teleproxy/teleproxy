@@ -126,7 +126,6 @@ long mpq_block_push (struct mp_queue_block *QB, mqn_value_t val);
 
 /* functions for mp_queue = list of mp_queue_block's */
 void init_mp_queue (struct mp_queue *MQ);
-struct mp_queue *alloc_mp_queue (void);
 struct mp_queue *alloc_mp_queue_w (void);
 void init_mp_queue_w (struct mp_queue *MQ);
 void clear_mp_queue (struct mp_queue *MQ); // frees all mpq block chain; invoke only if nobody else is using mp-queue
