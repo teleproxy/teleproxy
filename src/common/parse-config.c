@@ -60,19 +60,6 @@ int cfg_skspc (void) {
   return (unsigned char) *cfg_cur;
 }
 
-int cfg_getlex (void) {
-  switch (cfg_skipspc()) {
-  case ';':
-  case ':':
-  case '{':
-  case '}':
-    return cfg_lex = *cfg_cur++;
-  case 0:
-    return cfg_lex = 0;
-  }
-  return cfg_lex = -1;
-}
-
 int cfg_getword (void) {
   cfg_skspc();
   char *s = cfg_cur;
@@ -92,16 +79,6 @@ int cfg_getword (void) {
   return s - cfg_cur;
 }
 
-int cfg_getstr (void) {
-  cfg_skspc();
-  char *s = cfg_cur;
-  if (*s == '"') { return 1; } // fix later
-  while (*s > ' ' && *s != ';') {
-    s++;
-  }
-  return s - cfg_cur;
-}
-
 long long cfg_getint (void) {
   cfg_skspc ();
   char *s = cfg_cur;
@@ -111,21 +88,6 @@ long long cfg_getint (void) {
   }
   cfg_cur = s;
   return x;
-}
-
-long long cfg_getint_zero (void) {
-  cfg_skspc ();
-  char *s = cfg_cur;
-  long long x = 0;
-  while (*s >= '0' && *s <= '9') {
-    x = x * 10 + *(s ++) - '0';
-  }
-  if (cfg_cur == s) {
-    return -1;
-  } else {
-    cfg_cur = s;
-    return x;
-  }
 }
 
 long long cfg_getint_signed_zero (void) {
@@ -167,22 +129,6 @@ void syntax (const char *msg, ...) {
   fprintf (stderr, " near %.*s%s\n", len, cfg_cur, len >= 20 ? " ..." : "");
 }
 
-void syntax_warning (const char *msg, ...) {
-  va_list args;
-  if (cfg_lno) {
-    fprintf (stderr, "%s:%d: ", config_name, cfg_lno);
-  }
-  fputs ("warning: ", stderr);
-  va_start (args, msg);
-  vfprintf (stderr, msg, args);
-  va_end (args);
-  int len = 0;
-  while (cfg_cur[len] && cfg_cur[len] != 13 && cfg_cur[len] != 10 && len < 20) {
-    len++;
-  }
-  fprintf (stderr, " near %.*s%s\n", len, cfg_cur, len >= 20 ? " ..." : "");
-}
-
 int expect_lexem (int lexem) {
   if (cfg_lex != lexem) {
     syntax ("%c expected", lexem);
@@ -190,16 +136,6 @@ int expect_lexem (int lexem) {
   } else {
     return 0;
   }
-}
-
-int expect_word (const char *name, int len) {
-  int l = cfg_getword ();
-  if (len != l || memcmp (name, cfg_cur, len)) {
-    syntax ("Expected %.*s", len, name);
-    return -1;
-  }
-  cfg_cur += l;
-  return 0;
 }
 
 struct hostent *cfg_gethost_ex (int verb) {
@@ -274,21 +210,3 @@ void md5_hex_config (char *out) {
   md5_hex (config_buff, config_bytes, out);
 }
 
-void close_config (int *fd) {
-  if (config_buff) {
-    free (config_buff);
-    config_buff = NULL;
-  }
-  if (config_name) {
-    free (config_name);
-    config_name = NULL;
-  }
-  config_bytes = 0;
-  cfg_cur = cfg_start = cfg_end = NULL;
-  if (fd) {
-    if (*fd >= 0) {
-      assert (!close (*fd));
-      *fd = -1;
-    }
-  }
-}
