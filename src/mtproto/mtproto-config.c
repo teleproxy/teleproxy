@@ -227,14 +227,6 @@ struct mf_cluster *mf_cluster_lookup (struct mf_config *MC, int cluster_id, int 
   return force ? MC->default_cluster : 0;
 }
 
-void dump_mf_cluster (struct mf_cluster *MFC) {
-  int i;
-  kprintf ("Current state of cluster `%s` (N=%d, M=%d, alloc=%d):\n", "(nil)", MFC->targets_num, MFC->write_targets_num, MFC->targets_allocated);
-  for (i = 0; i < MFC->targets_num; i++) {
-    kprintf ("Target #%d [%c]: %s:%d\n", i, i < MFC->write_targets_num ? 'W' : 'R', show_ip (ntohl (CONN_TARGET_INFO(MFC->cluster_targets[i])->target.s_addr)), CONN_TARGET_INFO(MFC->cluster_targets[i])->port);
-  }
-}
-
 static void preinit_config (struct mf_config *MC) {
   MC->tot_targets = 0;
   MC->auth_clusters = 0;
