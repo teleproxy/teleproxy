@@ -74,10 +74,3 @@ double get_utime (int clock_id) {
   return res;
 }
 
-long long get_precise_time (unsigned precision) {
-  unsigned long long diff = rdtsc() - precise_time_rdtsc;
-  if (diff > precision) {
-    get_utime (CLOCK_REALTIME);
-  }
-  return precise_time;
-}

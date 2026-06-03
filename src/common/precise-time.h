@@ -52,14 +52,6 @@ double get_utime_monotonic (void);
 double get_utime (int clock_id);
 extern long long precise_time;  // (long long) (2^16 * precise unixtime)
 extern long long precise_time_rdtsc; // when precise_time was obtained
-long long get_precise_time (unsigned precision);
 
 /* ??? */
 double get_double_time (void);
-
-static inline void precise_sleep (int seconds, int nanoseconds) {
-  struct timespec t;
-  t.tv_sec  = seconds;
-  t.tv_nsec = nanoseconds;
-  nanosleep (&t, NULL);
-}
