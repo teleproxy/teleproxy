@@ -37,7 +37,7 @@ permissions:
   models: read
 
 concurrency:
-  group: telegram-notify
+  group: telegram-notify-${{ github.event.issue.number || github.event.discussion.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
