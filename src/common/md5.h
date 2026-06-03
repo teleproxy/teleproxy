@@ -12,9 +12,6 @@ typedef struct
     unsigned long total[2];     /*!< number of bytes processed  */
     unsigned long state[4];     /*!< intermediate digest state  */
     unsigned char buffer[64];   /*!< data block being processed */
-
-    unsigned char ipad[64];     /*!< HMAC: inner padding        */
-    unsigned char opad[64];     /*!< HMAC: outer padding        */
 }
 md5_context;
 
@@ -56,57 +53,6 @@ void md5_finish( md5_context *ctx, unsigned char output[16] );
 void md5( unsigned char *input, int ilen, unsigned char output[16] );
 
 void md5_hex (char *input, int ilen, char output[32]);
-
-
-/**
- * \brief          Output = MD5( file contents )
- *
- * \param path     input file name
- * \param output   MD5 checksum result
- *
- * \return         0 if successful, 1 if fopen failed,
- *                 or 2 if fread failed
- */
-int md5_file( char *path, unsigned char output[16] );
-
-/**
- * \brief          MD5 HMAC context setup
- *
- * \param ctx      HMAC context to be initialized
- * \param key      HMAC secret key
- * \param keylen   length of the HMAC key
- */
-void md5_hmac_starts( md5_context *ctx, unsigned char *key, int keylen );
-
-/**
- * \brief          MD5 HMAC process buffer
- *
- * \param ctx      HMAC context
- * \param input    buffer holding the  data
- * \param ilen     length of the input data
- */
-void md5_hmac_update( md5_context *ctx, unsigned char *input, int ilen );
-
-/**
- * \brief          MD5 HMAC final digest
- *
- * \param ctx      HMAC context
- * \param output   MD5 HMAC checksum result
- */
-void md5_hmac_finish( md5_context *ctx, unsigned char output[16] );
-
-/**
- * \brief          Output = HMAC-MD5( hmac key, input buffer )
- *
- * \param key      HMAC secret key
- * \param keylen   length of the HMAC key
- * \param input    buffer holding the  data
- * \param ilen     length of the input data
- * \param output   HMAC-MD5 result
- */
-void md5_hmac( unsigned char *key, int keylen,
-               unsigned char *input, int ilen,
-               unsigned char output[16] );
 
 /**
  * \brief          Checkup routine
