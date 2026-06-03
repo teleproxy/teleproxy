@@ -16,7 +16,12 @@ COPY . .
 
 # Build the application
 ARG VERSION=unknown
-RUN make clean && make -j$(nproc) EXTRA_VERSION="${VERSION}"
+ARG EXTRA_CFLAGS=
+ARG EXTRA_LDFLAGS=
+RUN make clean && make -j$(nproc) \
+    EXTRA_VERSION="${VERSION}" \
+    EXTRA_CFLAGS="${EXTRA_CFLAGS}" \
+    EXTRA_LDFLAGS="${EXTRA_LDFLAGS}"
 
 # Runtime image
 FROM alpine:3.21
