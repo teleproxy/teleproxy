@@ -19,6 +19,7 @@
 */
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -172,37 +173,50 @@ void reset_config (void) {
   cfg_lno = 0;
 }
 
-int load_config (const char *file, int fd) {
+int load_config (const char *file) {
+  int fd = -1;
+  int ret = 0;
+
+  if (!file)
+    return -EINVAL;
+
   if (!config_buff) {
     config_buff = malloc (MAX_CONFIG_SIZE+4);
-    assert (config_buff);
+    if (!config_buff)
+      return -ENOMEM;
   }
+
+  fd = open (file, O_RDONLY);
   if (fd < 0) {
-    fd = open (file, O_RDONLY);
-    if (fd < 0) {
-      fprintf (stderr, "Can not open file %s: %m\n", file);
-      return -1;
-    }
+    fprintf (stderr, "Can not open file %s: %m\n", file);
+    return -EINVAL;
   }
-  int r;
-  config_bytes = r = read (fd, config_buff, MAX_CONFIG_SIZE + 1);
-  if (r < 0) {
-    fprintf (stderr, "error reading configuration file %s: %m\n", config_name);
-    return -2;
-  }
-  if (r > MAX_CONFIG_SIZE) {
-    fprintf (stderr, "configuration file %s too long (max %d bytes)\n", config_name, MAX_CONFIG_SIZE);
-    return -2;
+
+  config_bytes = read (fd, config_buff, MAX_CONFIG_SIZE + 1);
+  if (config_bytes < 0) {
+    fprintf (stderr, "error reading configuration file %s: %m\n", file);
+    config_bytes = 0;
+    ret = -EIO;
+    goto out;
+  } else if (config_bytes > MAX_CONFIG_SIZE) {
+    fprintf (stderr, "configuration file %s too long (max %d bytes)\n", file, MAX_CONFIG_SIZE);
+    config_bytes = 0;
+    ret = -EIO;
+    goto out;
   }
   if (config_name) {
     free (config_name);
-  }
-  if (file) {
-    config_name = strdup (file);
+    config_name = NULL;
   }
 
+  config_name = strdup (file);
   reset_config ();
-  return fd;
+
+out:
+  if (fd >= 0)
+    close (fd);
+
+  return ret;
 }
 
 void md5_hex_config (char *out) {

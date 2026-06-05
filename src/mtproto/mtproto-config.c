@@ -239,14 +239,14 @@ static void preinit_config (struct mf_config *MC) {
 
 // flags = 0 -- syntax check only (first pass), flags = 1 -- create targets and points as well (second pass)
 // flags: +2 = allow proxies, +4 = allow proxies only, +16 = do not load file
-int parse_config (struct mf_config *MC, int flags, int config_fd) {
+int parse_config (struct mf_config *MC, int flags) {
   conn_target_job_t *targ_ptr;
   int have_proxy = 0;
 
   assert (flags & 4);
 
   if (!(flags & 17)) {
-    if (load_config (config_filename, config_fd) < 0) {
+    if (load_config (config_filename) < 0) {
       return -2;
     }
   }
@@ -354,16 +354,9 @@ int do_reload_config (int flags) {
   int res;
   need_reload_config = 0;
 
-  int fd = -1;
   assert (flags & 4);
 
   if (!(flags & 16)) {
-    fd = open (config_filename, O_RDONLY);
-    if (fd < 0) {
-      kprintf ("cannot re-read config file %s: %m\n", config_filename);
-      return -1;
-    }
-
     res = kdb_load_hosts ();
 
     if (res > 0) {
@@ -371,14 +364,7 @@ int do_reload_config (int flags) {
     }
   }
 
-  res = parse_config (NextConf, flags & -2, fd);
-
-  if (fd >= 0) {
-    close (fd);
-  }
-
-  //  clear_config (NextConf);
-  
+  res = parse_config (NextConf, flags & -2);
   if (res < 0) {
     kprintf ("error while re-reading config file %s, new configuration NOT applied\n", config_filename);
     return res;
@@ -388,8 +374,7 @@ int do_reload_config (int flags) {
     return 0;
   }
 
-  res = parse_config (NextConf, flags | 1, -1);
-
+  res = parse_config (NextConf, flags | 1);
   if (res < 0) {
     clear_config (NextConf, 0);
     kprintf ("fatal error while re-reading config file %s\n", config_filename);

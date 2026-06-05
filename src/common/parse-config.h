@@ -29,7 +29,7 @@ int cfg_getword (void);
 void syntax (const char *msg, ...);
 int expect_lexem (int lexem);
 void reset_config (void);
-int load_config (const char *file, int fd);
+int load_config (const char *file);
 void md5_hex_config (char *out);
 struct hostent *cfg_gethost (void);
 struct hostent *cfg_gethost_ex (int verb);
