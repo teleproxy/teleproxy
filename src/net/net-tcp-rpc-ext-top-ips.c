@@ -27,6 +27,7 @@
 
 #include <string.h>
 
+#include "common/ip-utils.h"
 #include "common/precise-time.h"
 #include "net/net-connections.h"
 #include "net/net-tcp-rpc-ext-server.h"
@@ -59,7 +60,6 @@ int tcp_rpcs_get_top_ips_per_secret (void) {
 /* Find an entry matching (ip, ipv6).  Empty slots have ip == 0 and zero ipv6. */
 static struct ip_volume_entry *ip_volume_lookup (int sid, unsigned ip,
                                                  const unsigned char *ipv6) {
-  static const unsigned char zero_ipv6[16] = {};
   for (int i = 0; i < IP_VOLUME_TABLE_SIZE; i++) {
     struct ip_volume_entry *e = &ip_volume[sid][i];
     if (ip != 0) {
@@ -81,7 +81,6 @@ static struct ip_volume_entry *ip_volume_acquire_slot (int sid) {
   for (int i = 0; i < IP_VOLUME_TABLE_SIZE; i++) {
     struct ip_volume_entry *e = &ip_volume[sid][i];
     if (e->ip == 0) {
-      static const unsigned char zero_ipv6[16] = {};
       if (memcmp (e->ipv6, zero_ipv6, 16) == 0) { return e; }
     }
   }
@@ -179,7 +178,6 @@ void tcp_rpcs_snapshot_top_ips (int sid, struct worker_top_ip *out,
       if (picked[i]) { continue; }
       struct ip_volume_entry *e = &ip_volume[sid][i];
       if (e->ip == 0) {
-        static const unsigned char zero_ipv6[16] = {};
         if (memcmp (e->ipv6, zero_ipv6, 16) == 0) { continue; }
       }
       long long total = e->bytes_in + e->bytes_out;

@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include "common/ip-utils.h"
 #include "common/platform.h"
 #include "mtproto/mtproto-dc-table.h"
 
@@ -191,7 +192,6 @@ int direct_dc_override (int dc_id, const char *host, int port) {
 int direct_dc_probe_ipv6 (void) {
   dc_table_init ();
 
-  static const unsigned char zero_ipv6[16] = {};
   if (memcmp (prod_table[1].addrs[0].ipv6, zero_ipv6, 16) == 0) {
     return 0;
   }

@@ -116,6 +116,7 @@ LIB_OBJS_NORMAL := \
 	${OBJ}/src/common/kprintf.o \
 	${OBJ}/src/common/precise-time.o ${OBJ}/src/common/cpuid.o \
 	${OBJ}/src/common/server-functions.o ${OBJ}/src/common/crc32.o \
+	${OBJ}/src/common/ip-utils.o \
 	${OBJ}/src/common/toml/tomlc17.o ${OBJ}/src/common/toml/tomlc17-scan.o \
 	${OBJ}/src/common/toml-config.o \
 	${OBJ}/src/common/qrcode/qrcodegen.o \

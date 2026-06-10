@@ -39,6 +39,7 @@
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 
+#include "common/ip-utils.h"
 #include "common/kprintf.h"
 #include "common/precise-time.h"
 #include "common/resolver.h"
@@ -562,7 +563,6 @@ static void socks5_send_connect (connection_job_t C) {
   assert (dc && addr_idx < dc->addr_count);
   const struct dc_addr *addr = &dc->addrs[addr_idx];
 
-  static const unsigned char zero_ipv6[16] = {};
   int has_ipv6 = memcmp (addr->ipv6, zero_ipv6, 16) != 0;
   int use_ipv6 = ipv6_enabled && has_ipv6;
 
@@ -707,8 +707,6 @@ static int tcp_direct_dc_connected (connection_job_t C) {
 /* Try to establish a DC connection using one of the entry's addresses.
    Returns the connection job on success, or NULL if all addresses failed. */
 static job_t direct_try_dc_addrs (connection_job_t C, const struct dc_entry *dc, int target_dc) {
-  static const unsigned char zero_ipv6[16] = {};
-
   for (int i = 0; i < dc->addr_count; i++) {
     const struct dc_addr *addr = &dc->addrs[i];
     int has_ipv6 = memcmp (addr->ipv6, zero_ipv6, 16) != 0;

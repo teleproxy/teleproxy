@@ -39,6 +39,7 @@
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 
+#include "common/ip-utils.h"
 #include "common/kprintf.h"
 #include "common/precise-time.h"
 #include "common/resolver.h"
@@ -316,7 +317,6 @@ static int ip_over_limit (int secret_id, unsigned ip, const unsigned char *ipv6)
   if (limit <= 0) { return 0; }
 
   /* Check if this IP is already tracked (existing connection from same IP) */
-  static const unsigned char zero_ipv6[16] = {};
   for (int i = 0; i < SECRET_MAX_TRACKED_IPS; i++) {
     struct tracked_ip *e = &per_secret_ips[secret_id][i];
     if (e->connections <= 0) { continue; }
@@ -344,8 +344,6 @@ static void ip_track_connect (int secret_id, unsigned ip, const unsigned char *i
   if (ext_secret_max_ips[secret_id] <= 0 && ext_secret_rate_limit[secret_id] <= 0) {
     return;
   }
-
-  static const unsigned char zero_ipv6[16] = {};
 
   /* Find existing entry for this IP */
   for (int i = 0; i < SECRET_MAX_TRACKED_IPS; i++) {
@@ -389,8 +387,6 @@ static void ip_track_connect (int secret_id, unsigned ip, const unsigned char *i
 }
 
 void ip_track_disconnect_impl (int secret_id, unsigned ip, const unsigned char *ipv6) {
-  static const unsigned char zero_ipv6[16] = {};
-
   for (int i = 0; i < SECRET_MAX_TRACKED_IPS; i++) {
     struct tracked_ip *e = &per_secret_ips[secret_id][i];
     if (e->connections <= 0) { continue; }
@@ -433,7 +429,6 @@ void tcp_rpcs_ip_track_clear_slot (int secret_id) {
 
 /* Find the tracked_ip entry for a given IP within a secret's table. */
 static struct tracked_ip *find_tracked_ip (int secret_id, unsigned ip, const unsigned char *ipv6) {
-  static const unsigned char zero_ipv6[16] = {};
   for (int i = 0; i < SECRET_MAX_TRACKED_IPS; i++) {
     struct tracked_ip *e = &per_secret_ips[secret_id][i];
     if (e->connections <= 0) { continue; }

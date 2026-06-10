@@ -28,6 +28,7 @@
 
 #include <openssl/rand.h>
 
+#include "common/ip-utils.h"
 #include "common/platform.h"
 #include "common/toml-config.h"
 #include "mtproto/mtproto-dc-table.h"
@@ -403,7 +404,6 @@ static void check_dc (struct check_context *ctx, int dc_id) {
   }
 
   const struct dc_addr *addr = &dc->addrs[0];
-  static const unsigned char zero_ipv6[16] = {};
 
   char ip_str[INET6_ADDRSTRLEN] = "?";
   struct sockaddr_storage ss;
