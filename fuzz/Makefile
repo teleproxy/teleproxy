@@ -71,11 +71,14 @@ run: $(TARGETS)
 mtproto-dc-table.o: ../src/mtproto/mtproto-dc-table.c ../src/mtproto/mtproto-dc-table.h
 	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -c -o $@ $<
 
-test_dc_lookup: test_dc_lookup.c mtproto-dc-table.o
+ip-utils.o: ../src/common/ip-utils.c ../src/common/ip-utils.h
+	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -c -o $@ $<
+
+test_dc_lookup: test_dc_lookup.c mtproto-dc-table.o ip-utils.o
 	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -o $@ $^
 
 test: $(TEST_TARGETS)
 	@for t in $(TEST_TARGETS); do echo "=== $$t ==="; ./$$t || exit 1; done
 
 clean:
-	rm -f $(TARGETS) $(TEST_TARGETS) $(PARSE_OBJS) $(OBFS2_OBJS) $(JA4_OBJS) mtproto-dc-table.o
+	rm -f $(TARGETS) $(TEST_TARGETS) $(PARSE_OBJS) $(OBFS2_OBJS) $(JA4_OBJS) mtproto-dc-table.o ip-utils.o
