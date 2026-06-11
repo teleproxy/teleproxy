@@ -1,0 +1,72 @@
+# Teleproxy configuration
+port = 0
+stats_port = 0
+external_port = 0
+workers = -1
+max_connections = 0
+maxconn = 0
+bind = ""
+ipv6 = false
+user = ""
+
+direct = false
+proxy_tag = ""
+
+http_stats = false
+stats_allow_net = ["", ""]
+top_ips_per_secret = 0
+
+ja4_log = false
+
+ip_blocklist = "" # "./path/to/file"
+ip_allowlist = "" # "./path/to/file"
+
+random_padding_only = false
+proxy_protocol = false
+mss_clamp = true
+
+dc_probe_interval = 0
+drain_timeout_secs = 300
+
+socks5 = "" # "socks5://user:pass@proxy.example.com:1080"
+
+[[secret]]
+key = "1234567890aaaabbbbccccddddeeeeff"
+label = "default"
+limit = 0
+quota = 0
+rate_limit = 0
+max_ips = 0
+expires = 0
+
+[[secret]]
+key = "dead01234567890abcead01234567890"
+label = "guest"
+limit = 50
+quota = "5G"
+rate_limit = "2M"
+max_ips = 3
+expires = 2025-06-30T00:00:00Z
+
+
+domain = ["www.example.ai", "www.example.info"] # only names
+
+[[domain]]
+name = "www.example.com"
+backend = "10.0.0.8:9090"
+[[domain]]
+name = "www.example.org"
+backend = "unix:/path" # ???
+
+[[dc_override]]
+dc = 1
+host = "99.99.99.90"
+port = 8888
+[[dc_override]]
+dc = 1
+host = "99.99.99.91"
+port = 8888
+[[dc_override]]
+dc = 2
+host = "100.100.100.100"
+port = 8889
