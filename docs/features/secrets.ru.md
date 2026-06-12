@@ -228,7 +228,7 @@ SECRET_EXPIRES_1=2025-06-30T23:59:59Z
 
 ```toml
 [[secret]]
-key = "cafe01234567890abcafe01234567890a"
+key = "cafe01234567890abcafe01234567890"
 label = "family"
 limit = 100
 quota = "50G"
@@ -237,7 +237,7 @@ max_ips = 10
 expires = 2026-12-31T23:59:59Z
 
 [[secret]]
-key = "dead01234567890abcead01234567890a"
+key = "dead01234567890abcead01234567890"
 label = "guest"
 limit = 50
 quota = "5G"
