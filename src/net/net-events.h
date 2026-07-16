@@ -88,8 +88,8 @@ int put_event_into_heap (event_t *ev);
 int put_event_into_heap_tail (event_t *ev, int ts_delta);
 
 int epoll_sethandler (int fd, int prio, event_handler_t handler, void *data);
-int epoll_fetch_events (int timeout);
-int epoll_work (int timeout);
+int epoll_fetch_events (int ms_timeout);
+int epoll_work ();
 int epoll_insert (int fd, int flags);
 int epoll_remove (int fd);
 int epoll_close (int fd);

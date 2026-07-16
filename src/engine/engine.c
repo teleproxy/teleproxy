@@ -489,7 +489,7 @@ void default_engine_server_start (void) /* {{{ */ {
 
   vkprintf (0, "main loop\n");
   for (;;) {
-    epoll_work (E->epoll_wait_timeout);
+    epoll_work ();
     if (interrupt_signal_raised ()) {
       if (F->on_waiting_exit) {
         while (1) {
