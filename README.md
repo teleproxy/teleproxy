@@ -39,9 +39,9 @@ Supports: DigitalOcean · Vultr · Hetzner · Linode · any Ubuntu/Debian VPS
 
 ## Highlights
 
-- **Fake-TLS camouflage** — traffic indistinguishable from normal HTTPS (TLS 1.3)
+- **Fake-TLS camouflage** — emulates HTTPS handshakes and TLS records
 - **Direct-to-DC mode** — bypass middle-end relays, zero config files needed
-- **Dynamic Record Sizing** — defeats statistical traffic analysis
+- **Dynamic Record Sizing** — varies record sizes and inter-record delays
 - **8 MB Docker image** — 7x smaller than the original
 - **Prometheus metrics** — production monitoring out of the box
 - **Up to 16 secrets** with labels and per-secret connection limits
@@ -49,7 +49,7 @@ Supports: DigitalOcean · Vultr · Hetzner · Linode · any Ubuntu/Debian VPS
 
 ## DPI Resistance
 
-Teleproxy's fake-TLS produces traffic indistinguishable from a standard Chrome TLS 1.3 session. Every claim below is verified by automated tests in CI.
+Teleproxy's fake-TLS emulates HTTPS traffic. Automated tests check the framing and camouflage below; they do not prove that a deployment will pass current DPI rules. The Telegram client controls its ClientHello fingerprint, which the proxy cannot rewrite. See the [current limitations and operator playbook](https://teleproxy.github.io/features/dpi-resistance/).
 
 | Layer | Implementation | Verified by |
 |-------|---------------|-------------|
@@ -62,7 +62,23 @@ Teleproxy's fake-TLS produces traffic indistinguishable from a standard Chrome T
 
 Every parser on the attack surface is fuzz-tested on every push (60s smoke) and weekly (30min deep exploration) with ASan + UBSan + libFuzzer. CodeQL and cppcheck run static analysis on every commit. The ASan CI even [verifies itself](https://github.com/teleproxy/teleproxy/blob/main/.github/workflows/test.yml) by re-introducing a known heap overflow and confirming detection.
 
-Other MTProto proxy implementations describe their TLS layer with adjectives. Teleproxy describes it with test names. Every anti-fingerprinting claim above links to an automated test that runs in CI on every commit — from JA3 hash computation to Shannon entropy of encrypted payloads to DRS timing distributions. No other MTProto proxy validates its DPI resistance this way.
+These tests cover specific protocol properties, from JA3 hash computation to encrypted-payload entropy and DRS timing distributions. Connectivity under censorship still needs testing with real Telegram clients on the affected networks.
+
+## Telegram WEB Proxy
+
+[Telegram Desktop 7.1](https://github.com/telegramdesktop/tdesktop/releases/tag/v7.1.0) added a WEB proxy type. It carries normal MTProxy traffic through an embedded browser over real HTTPS or WebSockets. Telegram's [tproxy-server](https://github.com/telegramdesktop/tproxy-server) relay converts those streams back into TCP connections to a local MTProxy backend.
+
+```text
+Telegram WebView -> HTTPS frontend -> tproxy-server -> MTProxy backend -> Telegram
+```
+
+Teleproxy can serve as the MTProxy backend: `tproxy-server` forwards the standard obfs2 or padded MTProxy stream unchanged. The WEB transport is handled by the relay and HTTPS frontend. When using Teleproxy as the backend:
+
+- Keep the backend listener private and use the same base 16-byte secret in the relay and Teleproxy. WEB clients accept plain or `dd`-prefixed secrets, not fake-TLS `ee` secrets.
+- Use a dedicated backend without `EE_DOMAIN` / `-D`, which enables TLS-only ingress. The public HTTPS connection terminates at the frontend.
+- Leave `PROXY_PROTOCOL` disabled: the reference relay sends raw MTProxy bytes without a PROXY header. Backend IP-based limits and statistics therefore see the relay address, not individual users.
+
+The public TLS handshake comes from the browser engine rather than Telegram's fake-TLS implementation. A compatible HTTPS frontend can also negotiate [Encrypted Client Hello (ECH)](https://www.rfc-editor.org/rfc/rfc9849.html) to hide the inner hostname, and [TLS certificate compression](https://www.rfc-editor.org/rfc/rfc8879.html) to reduce full-handshake certificate bytes. These require client support; ECH also requires the client to obtain the server's ECH configuration. Neither hides the server IP or guarantees access through a blocked network.
 
 ## Quick Start
 
