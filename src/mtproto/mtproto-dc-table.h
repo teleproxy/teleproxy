@@ -21,14 +21,13 @@
 #pragma once
 
 #include <netinet/in.h>
+#include "common/dc-id.h"
 
 struct dc_addr {
   in_addr_t ipv4;             /* network byte order, 0 if unavailable */
   unsigned char ipv6[16];     /* network byte order, all-zero if unavailable */
   int port;
 };
-
-#define DC_MAX_ADDRS 4
 
 struct dc_entry {
   int dc_id;
@@ -45,8 +44,20 @@ const struct dc_entry *direct_dc_lookup (int dc_id);
 
 /* Add or replace a DC address via --dc-override.
    Overrides for a dc_id replace the built-in addresses entirely.
-   Returns 0 on success, -1 on error (bad host or table full). */
+   Returns 0 on success, DC_OVERRIDE_EBADHOST if host is not an address
+   literal, DC_OVERRIDE_EFULL if the DC already has DC_MAX_ADDRS addresses
+   or the table already holds DC_OVERRIDE_MAX_DCS DCs. */
+#define DC_OVERRIDE_EBADHOST (-1)
+#define DC_OVERRIDE_EFULL    (-2)
 int direct_dc_override (int dc_id, const char *host, int port);
+
+/* Human-readable reason for a negative direct_dc_override() result. */
+const char *direct_dc_override_strerror (int rc);
+
+/* Return the --dc-override entry for exactly this dc_id, or NULL.
+   Unlike direct_dc_lookup(), no media/test/CDN normalization is applied
+   and the built-in table is never consulted. */
+const struct dc_entry *direct_dc_override_lookup (int dc_id);
 
 /* Probe IPv6 connectivity by attempting a non-blocking connect to a known DC.
    Returns 1 if IPv6 appears to work, 0 otherwise. */

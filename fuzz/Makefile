@@ -68,14 +68,14 @@ run: $(TARGETS)
 	done; \
 	if [ $$failed -ne 0 ]; then echo "FAIL: some fuzz targets crashed"; exit 1; fi
 
-mtproto-dc-table.o: ../src/mtproto/mtproto-dc-table.c ../src/mtproto/mtproto-dc-table.h
+mtproto-dc-table.o: ../src/mtproto/mtproto-dc-table.c ../src/mtproto/mtproto-dc-table.h ../src/common/dc-id.h
 	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -c -o $@ $<
 
 ip-utils.o: ../src/common/ip-utils.c ../src/common/ip-utils.h
 	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -c -o $@ $<
 
-test_dc_lookup: test_dc_lookup.c mtproto-dc-table.o ip-utils.o
-	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -o $@ $^
+test_dc_lookup: test_dc_lookup.c mtproto-dc-table.o ip-utils.o ../src/common/dc-id.h
+	$(CC) $(TEST_CFLAGS) $(FUZZ_CINCLUDE) -o $@ $(filter-out %.h,$^)
 
 test: $(TEST_TARGETS)
 	@for t in $(TEST_TARGETS); do echo "=== $$t ==="; ./$$t || exit 1; done

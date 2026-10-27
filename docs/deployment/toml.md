@@ -190,7 +190,7 @@ host = "2001:67c:4e8:f002::a"
 port = 443
 ```
 
-`dc` must be 1 through 5. At most five override rows are accepted.
+`dc` must be a production DC (1-5) or a CDN DC (201-299). `host` must be an IPv4 or IPv6 address written without brackets; hostnames are not resolved. At most 16 override rows are accepted, with up to four addresses per DC. A row that breaks any of these rules is a config error: the proxy refuses to start, and a SIGHUP reload fails and keeps the running configuration.
 
 ## Reload behavior
 

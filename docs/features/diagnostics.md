@@ -64,7 +64,7 @@ All options from the main proxy are accepted for config purposes:
 --direct               Direct mode
 -S, --secret SECRET    32-char hex secret (repeatable)
 -D, --domain DOMAIN    TLS domain[:port] (repeatable)
---dc-override DC:H:P   Override DC address (repeatable)
+--dc-override DC:H:P   Override DC address, DC 1-5 or CDN 201-299 (repeatable)
 ```
 
 The subcommand runs independently of the proxy — no ports are opened, no engine is started. Safe to run alongside a running instance.

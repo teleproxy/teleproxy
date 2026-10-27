@@ -16,6 +16,7 @@
 #include "toml-config.h"
 #include "tomlc17.h"
 #include "kprintf.h"
+#include "dc-id.h"
 
 int toml_config_parse_hex_secret (const char *hex, unsigned char out[16]) {
   if (!hex || strlen (hex) != 32) {
@@ -251,8 +252,9 @@ static int parse_dc_overrides (toml_datum_t toptab, struct toml_config *cfg,
     }
 
     toml_datum_t dc = toml_get (entry, "dc");
-    if (dc.type != TOML_INT64 || dc.u.int64 < 1 || dc.u.int64 > 5) {
-      snprintf (errbuf, errlen, "dc_override[%d]: 'dc' must be 1-5", i);
+    if (dc.type != TOML_INT64 || !dc_override_id_is_valid (dc.u.int64)) {
+      snprintf (errbuf, errlen,
+                "dc_override[%d]: 'dc' must be 1-5 or a CDN DC 201-299", i);
       return -1;
     }
     cfg->dc_overrides[i].dc_id = (int) dc.u.int64;
@@ -262,7 +264,25 @@ static int parse_dc_overrides (toml_datum_t toptab, struct toml_config *cfg,
       snprintf (errbuf, errlen, "dc_override[%d]: 'host' must be a non-empty string", i);
       return -1;
     }
+    /* Validated here rather than when applied, so that SIGHUP reload and
+       `teleproxy check` reject the same configs as startup does. */
+    if (!dc_override_host_is_valid (host.u.s)) {
+      snprintf (errbuf, errlen,
+                "dc_override[%d]: 'host' must be an IPv4 or IPv6 address, got '%s'",
+                i, host.u.s);
+      return -1;
+    }
     snprintf (cfg->dc_overrides[i].host, sizeof (cfg->dc_overrides[i].host), "%s", host.u.s);
+
+    int same_dc = 0;
+    for (int j = 0; j < i; j++) {
+      same_dc += cfg->dc_overrides[j].dc_id == cfg->dc_overrides[i].dc_id;
+    }
+    if (same_dc >= DC_MAX_ADDRS) {
+      snprintf (errbuf, errlen, "dc_override[%d]: more than %d addresses for DC %d",
+                i, DC_MAX_ADDRS, cfg->dc_overrides[i].dc_id);
+      return -1;
+    }
 
     toml_datum_t port = toml_get (entry, "port");
     if (port.type != TOML_INT64 || port.u.int64 < 1 || port.u.int64 > 65535) {

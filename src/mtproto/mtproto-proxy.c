@@ -67,6 +67,7 @@
 #include "mtproto-config.h"
 #include "mtproto-dc-table.h"
 #include "mtproto-dc-probes.h"
+#include "common/dc-id.h"
 #include "common/tl-parse.h"
 #include "engine/engine.h"
 #include "engine/engine-net.h"
@@ -1486,25 +1487,26 @@ int f_parse_option (int val) {
     break;
   case 2005:
     {
-      /* Parse dc_id:host:port or dc_id:[ipv6]:port */
+      /* Parse dc_id:host:port or dc_id:[ipv6]:port.  Errors must return -1:
+         the engine aborts only on negative results and ignores the rest. */
       char buf[256];
       int len = strlen (optarg);
       if (len >= (int)sizeof (buf)) {
         kprintf ("--dc-override argument too long: %s\n", optarg);
-        return 2;
+        return -1;
       }
       memcpy (buf, optarg, len + 1);
 
       char *colon1 = strchr (buf, ':');
       if (!colon1) {
         kprintf ("--dc-override: expected dc_id:host:port, got %s\n", optarg);
-        return 2;
+        return -1;
       }
       *colon1 = 0;
       int dc_id = atoi (buf);
-      if (dc_id <= 0 || dc_id > 5) {
-        kprintf ("--dc-override: dc_id must be 1-5, got %s\n", buf);
-        return 2;
+      if (!dc_override_id_is_valid (dc_id)) {
+        kprintf ("--dc-override: dc_id must be 1-5 or a CDN DC 201-299, got %s\n", buf);
+        return -1;
       }
 
       char *host_start = colon1 + 1;
@@ -1514,7 +1516,7 @@ int f_parse_option (int val) {
         char *bracket = strchr (host_start, ']');
         if (!bracket || bracket[1] != ':') {
           kprintf ("--dc-override: bad IPv6 format in %s\n", optarg);
-          return 2;
+          return -1;
         }
         *bracket = 0;
         host_start++;
@@ -1524,7 +1526,7 @@ int f_parse_option (int val) {
         char *last_colon = strrchr (host_start, ':');
         if (!last_colon) {
           kprintf ("--dc-override: expected host:port after dc_id in %s\n", optarg);
-          return 2;
+          return -1;
         }
         *last_colon = 0;
         port_str = last_colon + 1;
@@ -1532,11 +1534,13 @@ int f_parse_option (int val) {
       int port = atoi (port_str);
       if (port <= 0 || port > 65535) {
         kprintf ("--dc-override: bad port %s in %s\n", port_str, optarg);
-        return 2;
+        return -1;
       }
-      if (direct_dc_override (dc_id, host_start, port) < 0) {
-        kprintf ("--dc-override: failed to add %s (bad address or table full)\n", optarg);
-        return 2;
+      int rc = direct_dc_override (dc_id, host_start, port);
+      if (rc < 0) {
+        kprintf ("--dc-override: cannot add %s: %s\n", optarg,
+                 direct_dc_override_strerror (rc));
+        return -1;
       }
     }
     break;
@@ -1587,7 +1591,7 @@ void mtfront_prepare_parse_options (void) {
   parse_option ("ip-allowlist", required_argument, 0, 2002, "path to file with CIDR ranges to exclusively allow");
   parse_option ("direct", no_argument, 0, 2003, "connect directly to Telegram DCs instead of through ME relays (incompatible with -P)");
   parse_option ("stats-allow-net", required_argument, 0, 2004, "CIDR range to allow stats access from, e.g. 100.64.0.0/10 (repeatable)");
-  parse_option ("dc-override", required_argument, 0, 2005, "override DC address: dc_id:host:port or dc_id:[ipv6]:port (repeatable, direct mode)");
+  parse_option ("dc-override", required_argument, 0, 2005, "override DC address: dc_id:host:port or dc_id:[ipv6]:port (dc_id 1-5 or CDN 201-299; repeatable, direct mode)");
   parse_option ("config", required_argument, 0, 2006, "path to TOML config file (reloaded on SIGHUP for secrets/ACLs)");
   parse_option ("socks5", required_argument, 0, 2007, "route upstream DC connections through SOCKS5 proxy (socks5://[user:pass@]host:port)");
   parse_option ("proxy-protocol", no_argument, 0, 2008, "enable PROXY protocol v1/v2 on client listeners (for use behind HAProxy/nginx/NLB)");
@@ -1658,9 +1662,15 @@ void mtfront_pre_init (void) {
       domain_count++;
     }
     for (int i = 0; i < toml_cfg.dc_override_count; i++) {
-      direct_dc_override (toml_cfg.dc_overrides[i].dc_id,
-                          toml_cfg.dc_overrides[i].host,
-                          toml_cfg.dc_overrides[i].port);
+      int rc = direct_dc_override (toml_cfg.dc_overrides[i].dc_id,
+                                   toml_cfg.dc_overrides[i].host,
+                                   toml_cfg.dc_overrides[i].port);
+      if (rc < 0) {
+        /* Rows are validated at parse time; this is the CLI + TOML total */
+        kprintf ("config file error: dc_override[%d] (DC %d): %s\n", i,
+                 toml_cfg.dc_overrides[i].dc_id, direct_dc_override_strerror (rc));
+        exit (1);
+      }
     }
     if (toml_cfg.port > 0 && http_ports_num == 0) {
       http_port[0] = toml_cfg.port;

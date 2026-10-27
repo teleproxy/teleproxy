@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include "common/ip-utils.h"
 #include "common/platform.h"
+#include "common/dc-id.h"
 #include "mtproto/mtproto-dc-table.h"
 
 /*
@@ -40,8 +41,7 @@ static int dc_table_initialized;
 static struct dc_entry prod_table[5];
 static struct dc_entry test_table[3];
 
-#define MAX_OVERRIDES 16
-static struct dc_entry override_table[MAX_OVERRIDES];
+static struct dc_entry override_table[DC_OVERRIDE_MAX_DCS];
 static int override_count;
 
 static void dc_table_init (void) {
@@ -126,8 +126,8 @@ const struct dc_entry *direct_dc_lookup (int dc_id) {
 
   /* CDN DCs use 200 + base_dc_id.  Fall back to the origin DC
      when no --dc-override is configured for the CDN DC. */
-  if (dc_id > 200 && dc_id < 300) {
-    dc_id -= 200;
+  if (dc_id >= DC_ID_CDN_MIN && dc_id <= DC_ID_CDN_MAX) {
+    dc_id -= DC_ID_CDN_BASE;
   }
 
   if (is_test) {
@@ -147,8 +147,33 @@ const struct dc_entry *direct_dc_lookup (int dc_id) {
   return 0;
 }
 
+const struct dc_entry *direct_dc_override_lookup (int dc_id) {
+  for (int i = 0; i < override_count; i++) {
+    if (override_table[i].dc_id == dc_id) {
+      return &override_table[i];
+    }
+  }
+  return 0;
+}
+
+const char *direct_dc_override_strerror (int rc) {
+  switch (rc) {
+  case DC_OVERRIDE_EBADHOST:
+    return "host must be an IPv4 or IPv6 address";
+  case DC_OVERRIDE_EFULL:
+    return "too many overrides (max 4 addresses per DC, 16 DCs)";
+  default:
+    return "unknown error";
+  }
+}
+
 int direct_dc_override (int dc_id, const char *host, int port) {
   dc_table_init ();
+
+  /* Validate before allocating, so a bad host leaves no empty entry */
+  if (!dc_override_host_is_valid (host)) {
+    return DC_OVERRIDE_EBADHOST;
+  }
 
   /* Find existing override entry for this dc_id */
   struct dc_entry *entry = NULL;
@@ -160,8 +185,8 @@ int direct_dc_override (int dc_id, const char *host, int port) {
   }
 
   if (!entry) {
-    if (override_count >= MAX_OVERRIDES) {
-      return -1;
+    if (override_count >= DC_OVERRIDE_MAX_DCS) {
+      return DC_OVERRIDE_EFULL;
     }
     entry = &override_table[override_count++];
     memset (entry, 0, sizeof (*entry));
@@ -169,7 +194,7 @@ int direct_dc_override (int dc_id, const char *host, int port) {
   }
 
   if (entry->addr_count >= DC_MAX_ADDRS) {
-    return -1;
+    return DC_OVERRIDE_EFULL;
   }
 
   struct dc_addr *addr = &entry->addrs[entry->addr_count];
@@ -180,9 +205,6 @@ int direct_dc_override (int dc_id, const char *host, int port) {
     /* IPv6 address — leave ipv4 as 0 */
   } else {
     addr->ipv4 = inet_addr (host);
-    if (addr->ipv4 == (in_addr_t) -1) {
-      return -1;
-    }
   }
 
   entry->addr_count++;

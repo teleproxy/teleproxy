@@ -67,6 +67,14 @@ IPv6 addresses use brackets:
 ./teleproxy --direct --dc-override 2:[2001:db8::1]:443 -S <secret> ...
 ```
 
-Overrides for a DC replace its built-in addresses entirely. The flag is repeatable — multiple entries for the same DC are tried in order.
+Overrides for a DC replace its built-in addresses entirely. The flag is repeatable — multiple entries for the same DC are tried in order, up to four addresses per DC and 16 DCs in total.
+
+The host must be an IP address; hostnames are not resolved. An invalid override (unknown DC id, hostname, bad port, too many entries) stops the proxy at startup instead of being ignored, so with Docker a bad `DC_OVERRIDE` makes the container exit. Run `teleproxy check` with the same options to validate overrides and probe the addresses before deploying.
+
+CDN DCs are numbered 201–299 (200 + base DC) and can be overridden the same way. Without an override they fall back to their origin DC, which is not where CDN media lives:
+
+```bash
+./teleproxy --direct --dc-override 203:203.0.113.10:443 -S <secret> ...
+```
 
 Docker: `DC_OVERRIDE=2:10.0.0.1:443,2:10.0.0.2:443`
